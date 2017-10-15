@@ -41,8 +41,8 @@ void main() {
   
   Camera camera = chronosGL.getCamera();
   camera.setPos( 0.0, 0.0, 56.0 );
-  FlyingCamera fc = new FlyingCamera(camera);
-  chronosGL.addAnimatable('fc', fc);
+  FPSCamera fpscam = new FPSCamera(camera);
+  chronosGL.addAnimatable('fpscam', fpscam);
   
   Utils utils = chronosGL.getUtils();
   TextureCache textureCache = chronosGL.getTextureCache();
@@ -109,6 +109,7 @@ void main() {
       }
 
       BSPTree bspTree = new BSPTree(nodes2, planes2, leaves2, brushes2, leafBrushes, textures, brushSides2);
+      fpscam.setBSPTree( bspTree);
       
       print(list[7][0]['name']);
       

@@ -1,0 +1,6 @@
+name: Instagib
+description: Instagib Q3DM17 running with WebGL
+dependencies:
+  ChronosGL:
+    path: C:\Users\Ray\dart\ChronosGL
+  browser: any
