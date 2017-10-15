@@ -33,7 +33,9 @@ class QuakeCamera extends Animatable
   Vector position = new Vector();
   bool onGround = false;
   
-  Trace groundTrace = null;
+  Trace groundTrace = new Trace();
+  Trace smTrace = new Trace(); // slideMove
+  Trace ssmTrace = new Trace(); // stepSlideMove
 
   Vector tmp = new Vector();
 
@@ -142,7 +144,7 @@ class QuakeCamera extends Animatable
     checkPoint.y = position[1];
     checkPoint.z = position[2] - 0.25;
     
-    groundTrace = bsp.trace( position, checkPoint, mins, maxs);
+    bsp.trace( groundTrace, position, checkPoint, mins, maxs);
     
     // TODO: if ( !PM_CorrectAllSolid(&trace) )
     
@@ -157,10 +159,12 @@ class QuakeCamera extends Animatable
         return;
     }
     
+    /*
     if( groundTrace.plane.normal[2] < 0.7) { // steep slope
         onGround = false;
         return;
     }
+     */
     
     onGround = true;
   }
@@ -287,29 +291,29 @@ class QuakeCamera extends Animatable
         
         // calculate position we are trying to move to
       end.set( position);
-      end.add( new Vector().set(velocity).scale( time_left) ); // TODO: use tmp
+      end.addScaledVector( velocity, time_left);
         
         // see if we can make it there
-        Trace trace = bsp.trace( position, end, mins, maxs);
+        bsp.trace( smTrace, position, end, mins, maxs);
 
-        if( trace.allSolid) {
+        if( smTrace.allSolid) {
             // entity is completely trapped in another solid
             velocity[2] = 0.0;   // don't build up falling damage, but allow sideways acceleration
             return true;
         }
 
-        if( trace.fraction > 0) {
+        if( smTrace.fraction > 0) {
           // actually covered some distance
-          position.set( trace.endPos);
+          position.set( smTrace.endPos);
         }
 
-        if( trace.fraction == 1.0) {
+        if( smTrace.fraction == 1.0) {
              break;     // moved the entire distance
         }
         
-        time_left -= time_left * trace.fraction;
+        time_left -= time_left * smTrace.fraction;
         
-        planes.add( new Vector().set(trace.plane.normal));
+        planes.add( new Vector().set(smTrace.plane.normal));
 
         //
         // modify velocity so it parallels all of the clip planes
@@ -392,12 +396,12 @@ class QuakeCamera extends Animatable
 
     down.set( start_o);
     down[2] -= STEPSIZE;
-    Trace trace = bsp.trace( start_o, down, mins, maxs);
+    bsp.trace( ssmTrace, start_o, down, mins, maxs);
     
     up.set(qup);  
     
     // never step up when you still have up velocity
-    if ( velocity[2] > 0 && (trace.fraction == 1.0 || trace.plane.normal.dot( up) < 0.7)) { return; }
+    if ( velocity[2] > 0 && (ssmTrace.fraction == 1.0 || ssmTrace.plane.normal.dot( up) < 0.7)) { return; }
     
     down_o.set( position);
     down_v.set( velocity);
@@ -406,12 +410,12 @@ class QuakeCamera extends Animatable
     up[2] += STEPSIZE;
     
     // test the player position if they were a stepheight higher
-    trace = bsp.trace( start_o, up, mins, maxs); // TODO: pass in Output to avoid Object creation
-    if ( trace.allSolid ) { return; } // can't step up
+    bsp.trace( ssmTrace, start_o, up, mins, maxs);
+    if ( ssmTrace.allSolid ) { return; } // can't step up
     
-    double stepSize = trace.endPos[2] - start_o[2];
+    double stepSize = ssmTrace.endPos[2] - start_o[2];
     // try slidemove from this position
-    position.set( trace.endPos);
+    position.set( ssmTrace.endPos);
     velocity.set( start_v);
     
     slideMove( gravity );
@@ -419,12 +423,12 @@ class QuakeCamera extends Animatable
     // push down the final amount
     down.set(position );
     down[2] -= stepSize;
-    trace = bsp.trace( position, down, mins, maxs);
-    if ( !trace.allSolid) {
-      position.set( trace.endPos);
+    bsp.trace( ssmTrace, position, down, mins, maxs);
+    if ( !ssmTrace.allSolid) {
+      position.set( ssmTrace.endPos);
     }
-    if ( trace.fraction < 1.0) {
-        clipVelocity( velocity, trace.plane.normal, velocity);
+    if ( ssmTrace.fraction < 1.0) {
+        clipVelocity( velocity, ssmTrace.plane.normal, velocity);
     }
 
   }

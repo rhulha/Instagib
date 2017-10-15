@@ -1,6 +1,5 @@
 part of instagib;
 
-double q3bsptree_trace_offset = 0.03125; // TODO: remove
 final Vector ORIGIN = new Vector(0.0, 0.0, 0.0);
 
 class Trace {
@@ -8,7 +7,7 @@ class Trace {
   bool startSolid = false;
   double fraction = 1.0;
   Vector endPos = new Vector();
-  Plane plane;
+  Plane plane = new Plane();
   int surfaceFlags; // surface hit
   int contents; // contents on other side of surface hit
   int entityNum; // entity the contacted sirface is a part of
@@ -18,10 +17,23 @@ class Trace {
     startSolid = false;
     fraction = 1.0;
     endPos.scale(0);
-    plane = null;
+    plane.clear();
     surfaceFlags = 0;
     contents = 0;
     entityNum = 0;
+  }
+  
+  void set(Trace trace) {
+    allSolid = trace.allSolid;
+    startSolid = trace.startSolid;
+    fraction = trace.fraction;
+    endPos.set(trace.endPos);
+    plane.normal.set(trace.plane.normal);
+    plane.dist = trace.plane.dist;
+    plane.setTypeAndSignbits();
+    surfaceFlags = trace.surfaceFlags;
+    contents = trace.contents;
+    entityNum = trace.entityNum;
   }
 }
 
@@ -82,19 +94,18 @@ class BSPTree {
 
   TraceWork tw = new TraceWork();
 
-  Trace trace(Vector start, Vector end, [Vector mins, Vector maxs, int modelClipHandle=0, Vector origin, int brushmask=0, bool capsule=false] /*, Sphere sphere*/) {
+  void trace( Trace trace, Vector start, Vector end, [Vector mins, Vector maxs, int modelClipHandle=0, Vector origin, int brushmask=0, bool capsule=false] /*, Sphere sphere*/) {
     Float32List offset = new Float32List(3);
 
     cm.checkcount++; // TODO: check all
 
     tw.reset(); // tw.trace.fraction = 1; // assume it goes the entire distance until shown otherwise
 
-    tw.modelOrigin.set(origin);
-
     if (mins == null) mins = ORIGIN;
     if (maxs == null) maxs = ORIGIN;
     if (origin == null) origin = ORIGIN;
 
+    tw.modelOrigin.set(origin);
     tw.contents = brushmask;
 
     // adjust so that mins and maxs are always symetric, which
@@ -144,13 +155,11 @@ class BSPTree {
 
     if (tw.trace.fraction == 1) {
       tw.trace.endPos.set(end);
-    } else { // collided with something
-      for (int i = 0; i < 3; i++) {
-        tw.trace.endPos[i] = start[i] + tw.trace.fraction * (end[i] - start[i]);
-      }
+    } else {
+      tw.trace.endPos.set(start).lerp(end, tw.trace.fraction); // collided with something
     }
 
-    return tw.trace;
+    trace.set(tw.trace);
   }
 
   void traceThroughLeaf(TraceWork tw, Leaf leaf) {
@@ -162,7 +171,8 @@ class BSPTree {
       }
     }
 
-    for (int k = 0; k < leaf.numLeafSurfaces; k++) {
+    
+    for (int k = leaf.numLeafSurfaces; k < leaf.numLeafSurfaces; k++) { // TODO: reactivate by setting k=0 !!!!!!!!!!!!!!!!
       Patch patch = patches[cm.leafSurfaces[leaf.firstLeafSurface + k]];
       if (patch == null) {
         continue;
@@ -264,7 +274,7 @@ class BSPTree {
         } else {
           VectorCopy(planes.plane, plane);
         }
-        /* // TODO: Sphere
+        /* // Sphere
         if ( tw->sphere.use ) {
           // adjust the plane distance apropriately for radius
           plane[3] += tw->sphere.radius;
@@ -394,7 +404,7 @@ class BSPTree {
     if (plane.type < 3) {
       t1 = p1[plane.type] - plane.dist;
       t2 = p2[plane.type] - plane.dist;
-      offset = tw.extents[plane.type]; // TODO: make sure extents is correctly filled
+      offset = tw.extents[plane.type];
     } else {
       t1 = plane.normal.dot(p1) - plane.dist;
       t2 = plane.normal.dot(p2) - plane.dist;
@@ -463,7 +473,7 @@ class BSPTree {
 
     Brushside leadside;
 
-    // TODO: if( tw.sphere.use)
+    // if( tw.sphere.use)
 
     for (int i = 0; i < brush.numSides; i++) {
       Brushside side = cm.brushSides[brush.firstSide + i];
