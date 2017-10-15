@@ -8,18 +8,19 @@ class BSPNode {
   List<int> mins;
   List<int> maxs;
   BSPNode.init( this.planeNum, this.children, this.mins, this.maxs);
-  BSPNode( Int32List data) {
-    planeNum = data[0];
-    children = data.sublist(1, 3);
-    mins = data.sublist(3, 6);
-    maxs = data.sublist(6, 9);
+  BSPNode( BinaryReader br) {
+    planeNum = br.readOneSignedInt();
+    children = br.readSignedInt(2);
+    mins = br.readSignedInt(3);
+    maxs = br.readSignedInt(3);
   }
-  static List<BSPNode> parse(Int32List nodes) {
-    List<BSPNode> nodes2 = new List<BSPNode>(nodes.length~/9);
-    for( int i=0;i<nodes2.length;i++) {
-      nodes2[i] = new BSPNode(nodes.sublist(i*9, i*9+9));
+  static List<BSPNode> parse(BinaryReader br) {
+    int count = br.length~/(9*4); // 9 * int32
+    List<BSPNode> nodes = new List<BSPNode>(count);
+    for( int i=0;i<count;i++) {
+      nodes[i] = new BSPNode(br);
     }
-    return nodes2;
+    return nodes;
   }
 }
 
@@ -27,16 +28,17 @@ class Plane {
   Vector normal;
   double dist;
   Plane.init( this.normal, this.dist);
-  Plane( Float32List data) {
-    normal = new Vector.useList(data.sublist(0, 3));
-    dist = data[3];
+  Plane( BinaryReader br) {
+    normal = new Vector.useList(br.readFloat(3));
+    dist = br.readOneFloat();
   }
-  static List<Plane> parse(Float32List planes) {
-    List<Plane> planes2 = new List<Plane>(planes.length~/4);
-    for( int i=0;i<planes2.length;i++) {
-      planes2[i] = new Plane(planes.sublist(i*4, i*4+4));
+  static List<Plane> parse(BinaryReader br) {
+    int count = br.length~/(4*4); // 9 * float32
+    List<Plane> planes = new List<Plane>(count);
+    for( int i=0;i<count;i++) {
+      planes[i] = new Plane(br);
     }
-    return planes2;
+    return planes;
   }
 }
 
@@ -50,22 +52,23 @@ class Leaf {
   int firstLeafBrush;
   int numLeafBrushes;
   Leaf.init(this.cluster, this.area, this.mins, this.maxs, this.firstLeafSurface, this.numLeafSurfaces, this.firstLeafBrush, this.numLeafBrushes);
-  Leaf( Int32List data) {
-    cluster = data[0];
-    area = data[1];
-    mins = data.sublist(2, 5);
-    maxs = data.sublist(5, 8);
-    firstLeafSurface = data[8];
-    numLeafSurfaces = data[9];
-    firstLeafBrush = data[10];
-    numLeafBrushes = data[11];
+  Leaf( BinaryReader br) {
+    cluster = br.readOneSignedInt();
+    area = br.readOneSignedInt();
+    mins = br.readSignedInt(3);
+    maxs = br.readSignedInt(3);
+    firstLeafSurface = br.readOneSignedInt();
+    numLeafSurfaces = br.readOneSignedInt();
+    firstLeafBrush = br.readOneSignedInt();
+    numLeafBrushes = br.readOneSignedInt();
   }
-  static List<Leaf> parse(Int32List leaves) {
-    List<Leaf> leaves2 = new List<Leaf>(leaves.length~/12);
-    for( int i=0;i<leaves2.length;i++) {
-      leaves2[i] = new Leaf(leaves.sublist(i*12, i*12+12));
+  static List<Leaf> parse(BinaryReader br) {
+    int count = br.length~/(12*4); // 12 * int32
+    List<Leaf> leafs = new List<Leaf>(count);
+    for( int i=0;i<count;i++) {
+      leafs[i] = new Leaf(br);
     }
-    return leaves2;
+    return leafs;
   }
 }
 
@@ -74,17 +77,18 @@ class Brush {
   int numSides;
   int shaderNum;
   Brush.init( this.firstSide, this.numSides, this.shaderNum);
-  Brush( Int32List data) {
-    firstSide = data[0];
-    numSides = data[1];
-    shaderNum = data[2];
+  Brush( BinaryReader br) {
+    firstSide = br.readOneSignedInt();
+    numSides = br.readOneSignedInt();
+    shaderNum = br.readOneSignedInt();
   }
-  static List<Brush> parse(Int32List brushes) {
-    List<Brush> brushes2 = new List<Brush>(brushes.length~/3);
-    for( int i=0;i<brushes2.length;i++) {
-      brushes2[i] = new Brush(brushes.sublist(i*3, i*3+3));
+  static List<Brush> parse(BinaryReader br) {
+    int count = br.length~/(3*4); // 3 * int32
+    List<Brush> brushes = new List<Brush>(count);
+    for( int i=0;i<brushes.length;i++) {
+      brushes[i] = new Brush(br);
     }
-    return brushes2;
+    return brushes;
   }
 }
 
@@ -92,17 +96,18 @@ class Brushside {
   int planeNum;
   int shaderNum;
   Brushside.init(this.planeNum, this.shaderNum);
-  Brushside( Int32List data) {
-    planeNum = data[0];
-    shaderNum = data[1];
+  Brushside( BinaryReader br) {
+    planeNum = br.readOneSignedInt();
+    shaderNum = br.readOneSignedInt();
   }
   
-  static List<Brushside> parse(Int32List brushSides) {
-    List<Brushside> brushSides2 = new List<Brushside>(brushSides.length~/2);
-    for( int i=0;i<brushSides2.length;i++) {
-      brushSides2[i] = new Brushside(brushSides.sublist(i*2, i*2+2));
+  static List<Brushside> parse(BinaryReader br) {
+    int count = br.length~/(2*4); // 2 * int32
+    List<Brushside> brushSides = new List<Brushside>(count);
+    for( int i=0;i<count;i++) {
+      brushSides[i] = new Brushside(br);
     }
-    return brushSides2;
+    return brushSides;
   }
 }
 
@@ -121,10 +126,19 @@ class BSPTree {
   List<Leaf> leaves;
   List<Brush> brushes;
   Int32List leafBrushes;
-  var textures;
+  List<Shader> textures;
   List<Brushside> brushSides;
+  List<Surface> surfaces;
 
-  BSPTree( this.nodes, this.planes, this.leaves, this.brushes, this.leafBrushes, this.textures, this.brushSides);
+  BSPTree( this.nodes, this.planes, this.leaves, this.brushes, this.leafBrushes, this.textures, this.brushSides, this.surfaces) {
+    
+    //for ( int i = 0 ; i < count ; i++) {      generatePatchCollide( width, height, points );    }
+    
+  }
+  
+  void generatePatchCollide( width, height, points) {
+    
+  }
   
   
   Output trace( Vector start, Vector end, double radius) {
@@ -148,7 +162,7 @@ class BSPTree {
       for( int i = 0; i < leaf.numLeafBrushes; i++) {
         Brush brush = brushes[leafBrushes[leaf.firstLeafBrush + i]];
         var texture = textures[brush.shaderNum];
-        if( brush.numSides > 0 && ((texture['contentFlags'] & 1) == 1)) {
+        if( brush.numSides > 0 && ((texture.contentFlags & 1) == 1)) {
           this.traceBrush( brush, start, end, radius, output);
         }
       }

@@ -3,11 +3,12 @@ library instagib;
 import 'dart:html' as HTML;
 import 'dart:math' as Math;
 import 'dart:async';
-import 'dart:convert';
 import 'dart:typed_data';
 import 'package:chronosgl/chronosgl.dart';
 import 'sound.dart';
+import 'loader/BSPParser.dart';
 
+part 'q3dm17.dart';
 part 'bsp.dart';
 part 'QuakeCamera.dart';
 part 'instagib_shader.dart';
@@ -55,36 +56,79 @@ void main() {
     
     utils.addSkybox( "textures/skybox_", ".png", "nx", "px", "nz", "pz", "ny", "py");
     
-    FileCache bfc = new FileCache();
-    bfc.addBinary('data/q3dm17.indices');
-    bfc.addBinary('data/q3dm17.verts');
-    bfc.addBinary('data/q3dm17.normals');
-    bfc.addBinary('data/q3dm17.colors');
-    
-    bfc.addBinary('data/q3dm17.nodes');
-    bfc.addBinary('data/q3dm17.planes');
-    bfc.addBinary('data/q3dm17.leafs');
-    bfc.addBinary('data/q3dm17.brushes');
-    bfc.addBinary('data/q3dm17.leafbrushes');
-    bfc.addBinary('data/q3dm17.brushsides');
-    bfc.addText('data/q3dm17.textures');
-    bfc.addText('data/q3dm17.ents');
-    
-    bfc.loadAllThenExecute((){
-      Uint16List  xs = bfc.get('data/q3dm17.indices').asUint16List();
-      Float32List vs = bfc.get('data/q3dm17.verts').asFloat32List();
-      Float32List ns = bfc.get('data/q3dm17.normals').asFloat32List();
-      Float32List cs = bfc.get('data/q3dm17.colors').asFloat32List();
+    chronosGL.getUtils().loadBinaryFile("data/q3dm17.bsp").then((ByteBuffer bspFile){
+      
+      BSPParser parser = new BSPParser(bspFile);
+      
+      List<Shader> shaders = parser.getShaders();
+      List<Surface> surfaces = parser.getSurfaces();
+      List<Vertex> vertexes = parser.getDrawVerts();
+      List<int> indexes = parser.getDrawIndexes();
 
-      List<BSPNode> nodes = BSPNode.parse(bfc.get('data/q3dm17.nodes').asInt32List());
-      List<Plane> planes = Plane.parse(bfc.get('data/q3dm17.planes').asFloat32List());
-      List<Leaf> leaves = Leaf.parse(bfc.get('data/q3dm17.leafs').asInt32List());
-      List<Brush> brushes = Brush.parse(bfc.get('data/q3dm17.brushes').asInt32List());
-      Int32List leafBrushes = bfc.get('data/q3dm17.leafbrushes').asInt32List();
-      List<Brushside> brushSides = Brushside.parse(bfc.get('data/q3dm17.brushsides').asInt32List());
-      var textures = JSON.decode(bfc.get('data/q3dm17.textures').text);
+      for (Surface surface in surfaces) {
+        if (surface.surfaceType == Surface.patch) {
+          //print("tessellate");
+          tessellate(surface, vertexes, indexes, 20);
+        }
+      }
 
-      BSPTree bspTree = new BSPTree(nodes, planes, leaves, brushes, leafBrushes, textures, brushSides);
+      changeColors(surfaces, indexes, shaders, vertexes);
+      
+      List<double> vertsList = new List<double>();
+      List<double> normalsList = new List<double>();
+      List<double> texCoordsList = new List<double>();
+      List<double> lmCoordsList = new List<double>();
+      List<double> colorsList = new List<double>();
+      for (Vertex vertex in vertexes) {
+        vertsList.addAll(vertex.xyz);
+        normalsList.addAll(vertex.normal);
+        texCoordsList.add(vertex.st[0]);
+        texCoordsList.add(vertex.st[1]);
+        lmCoordsList.add(vertex.lightmap[0]);
+        lmCoordsList.add(vertex.lightmap[1]);
+        colorsList.addAll(vertex.color);
+      }
+
+
+      List<String> skip = new List<String>();
+      skip.add("flareShader");
+      skip.add("textures/skies/blacksky");
+      skip.add("textures/sfx/beam");
+      skip.add("models/mapobjects/spotlamp/beam");
+      skip.add("models/mapobjects/lamps/flare03");
+      skip.add("models/mapobjects/teleporter/energy"); // TODO readd and make blue ?
+      skip.add("models/mapobjects/spotlamp/spotlamp");
+      skip.add("models/mapobjects/spotlamp/spotlamp_l");
+      skip.add("models/mapobjects/lamps/bot_lamp"); // head on the railgun pad
+      skip.add("models/mapobjects/lamps/bot_lamp2");
+      skip.add("models/mapobjects/lamps/bot_flare");
+      skip.add("models/mapobjects/lamps/bot_flare2");
+      skip.add("models/mapobjects/lamps/bot_wing");
+      //skip.add("models/mapobjects/kmlamp1"); // stand lights
+      //skip.add("models/mapobjects/kmlamp_white");
+
+      List<int> indicesList = new List<int>();
+      for (Surface surface in surfaces) {
+        if (skip.contains(shaders[surface.shaderNum].shader)) continue;
+        for (int k = 0; k < surface.numIndexes; ++k) {
+          int i = surface.firstVert + indexes[surface.firstIndex + k];
+          indicesList.add(i);
+        }
+      }
+
+      Uint16List  xs = new Uint16List.fromList(indicesList);
+      Float32List vs = new Float32List.fromList(vertsList);
+      Float32List ns = new Float32List.fromList(normalsList);
+      Float32List cs = new Float32List.fromList(colorsList);
+
+      List<BSPNode> nodes = BSPNode.parse(parser.getLump(LumpTypes.Nodes));
+      List<Plane> planes = Plane.parse(parser.getLump(LumpTypes.Planes));
+      List<Leaf> leaves = Leaf.parse(parser.getLump(LumpTypes.Leafs)); // TODO: rename
+      List<Brush> brushes = Brush.parse(parser.getLump(LumpTypes.Brushes));
+      Int32List leafBrushes = parser.getLump(LumpTypes.LeafBrushes).readAllSignedInts();
+      List<Brushside> brushSides = Brushside.parse(parser.getLump(LumpTypes.BrushSides));
+
+      BSPTree bspTree = new BSPTree(nodes, planes, leaves, brushes, leafBrushes, shaders, brushSides, surfaces);
       fpscam.setBSPTree( bspTree);
       
       for( var a =0; a<vs.length ;a++) {
