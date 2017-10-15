@@ -49,9 +49,10 @@ class QuakeCamera extends Animatable
     HTML.CanvasElement canvas = HTML.document.querySelector('#webgl-canvas');
     canvas.onMouseDown.listen( (HTML.MouseEvent e) {
       e.preventDefault();
-      if( HTML.document.pointerLockElement != canvas)
+      if( HTML.document.pointerLockElement != canvas) {
         canvas.requestPointerLock();
-      else {
+        canvas.requestFullscreen();
+      } else {
         snd.playSound('rail');
         addLaser(camera, 0, -0.2);
       }
@@ -95,6 +96,7 @@ class QuakeCamera extends Animatable
 
     if( cpk[Key.SPACE] != null) {
       jump();
+      cpk[Key.SPACE] = null;
     }
     
     move( dir, 50.0/3.0);
