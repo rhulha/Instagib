@@ -4,11 +4,13 @@ import 'dart:html' as HTML;
 import 'dart:async';
 import 'package:ChronosGL/chronos_gl.dart';
 import 'dart:typed_data';
+import 'sound.dart';
 
 part 'bsp.dart';
-part 'FPSCamera.dart';
 part 'QuakeCamera.dart';
 part 'sobel_shader.dart';
+
+Sound snd = new Sound();
 
 void main() {
   
@@ -31,6 +33,11 @@ void main() {
   textureCache.add("textures/skybox_py.png");
   textureCache.add("textures/skybox_nz.png");
   textureCache.add("textures/skybox_pz.png");
+  
+  
+  snd.loadSound('data/jump1.wav', 'jump');
+  snd.loadSound('data/railgf1a.wav', 'rail');
+  
   textureCache.loadAllThenExecute((){
     
     utils.addSkybox( "textures/skybox_", ".png", "nx", "px", "nz", "pz", "ny", "py");
