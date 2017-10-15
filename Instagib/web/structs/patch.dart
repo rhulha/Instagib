@@ -5,7 +5,7 @@ class Grid {
   int height;
   bool wrapWidth;
   bool wrapHeight;
-  List<Vector> points = new List<Vector>(129*129); // [width*height] MAX_GRID_SIZE = 129
+  List<List<Vector>> points = new List<List<Vector>>.generate(129, (idx)=> new List<Vector>.generate(129, (idx)=>new Vector())); // [width*height] MAX_GRID_SIZE = 129
 }
 
 class PatchPlane {
@@ -20,7 +20,7 @@ class Facet {
   List<bool> borderNoAdjust = new List<bool>(4+6+16);
 }
 class PatchCollide {
-  List<Vector> bounds = new List<Vector>(2);
+  List<Vector> bounds = new List<Vector>.generate(2, (idx)=>new Vector());
   int numPlanes;      // surface planes plus edge planes
   List<PatchPlane> planes;
   int   numFacets;
