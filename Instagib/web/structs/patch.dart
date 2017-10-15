@@ -8,6 +8,11 @@ class Grid {
   List<List<Vector>> points = new List<List<Vector>>.generate(129, (idx)=> new List<Vector>.generate(129, (idx)=>new Vector())); // [width*height] MAX_GRID_SIZE = 129
 }
 
+class Winding {
+  int numpoints;
+  List<Vector> p = new List<Vector>.generate(4, (idx)=>new Vector());   // variable sized
+}
+
 class PatchPlane {
   List<double> plane = new List<double>(4);
   int   signbits;   // signx + (signy<<1) + (signz<<2), used as lookup during collision

@@ -12,6 +12,7 @@ const int SIDE_BACK = 1;
 const int SIDE_ON = 2;
 const int SIDE_CROSS = 3;
 
+const double MAX_MAP_BOUNDS = 65535.0;
 
 class Output {
   bool allSolid = false;
@@ -198,8 +199,8 @@ class BSPTree {
           facet.borderPlanes[3] = borders[EN_LEFT];
           facet.borderNoAdjust[3] = noAdjust[EN_LEFT];
           setBorderInward( facet, grid, gridPlanes, i, j, -1 );
-          if ( CM_ValidateFacet( facet ) ) {
-            CM_AddFacetBevels( facet );
+          if ( validateFacet( facet ) ) {
+            addFacetBevels( facet );
             numFacets++;
           }
         } else {
@@ -218,16 +219,15 @@ class BSPTree {
             }
           }
           setBorderInward( facet, grid, gridPlanes, i, j, 0 );
-          if ( CM_ValidateFacet( facet ) ) {
-            CM_AddFacetBevels( facet );
+          if ( validateFacet( facet ) ) {
+            addFacetBevels( facet );
             numFacets++;
           }
 
-          if ( numFacets == MAX_FACETS ) {
-            Com_Error( ERR_DROP, "MAX_FACETS" );
-          }
-          facet = &facets[numFacets];
-          Com_Memset( facet, 0, sizeof( *facet ) );
+          assert( numFacets < 1024 );
+          facet = facets[numFacets];
+          
+          // TODO: Com_Memset( facet, 0, sizeof( *facet ) );
 
           facet.surfacePlane = gridPlanes[i][j][1];
           facet.numBorders = 3;
@@ -242,9 +242,9 @@ class BSPTree {
               facet.borderPlanes[2] = edgePlaneNum( grid, gridPlanes, i, j, 5 );
             }
           }
-          CM_SetBorderInward( facet, grid, gridPlanes, i, j, 1 );
-          if ( CM_ValidateFacet( facet ) ) {
-            CM_AddFacetBevels( facet );
+          setBorderInward( facet, grid, gridPlanes, i, j, 1 );
+          if ( validateFacet( facet ) ) {
+            addFacetBevels( facet );
             numFacets++;
           }
         }
@@ -252,12 +252,271 @@ class BSPTree {
     }
 
     // copy the results out
-    pf.numPlanes = numPlanes;
-    pf.numFacets = numFacets;
-    pf.facets = Hunk_Alloc( numFacets * sizeof( *pf.facets ), h_high );
-    Com_Memcpy( pf.facets, facets, numFacets * sizeof( *pf.facets ) );
-    pf.planes = Hunk_Alloc( numPlanes * sizeof( *pf.planes ), h_high );
-    Com_Memcpy( pf.planes, planes, numPlanes * sizeof( *pf.planes ) );
+    pc.numPlanes = numPlanes;
+    pc.numFacets = numFacets;
+    pc.facets = new List<Facet>.from(facets); // TODO: maybe deep copy needed
+    pc.planes = new List<PatchPlane>.from(planes); // TODO: maybe deep copy needed
+  }
+  
+  void addFacetBevels(Facet facet) {
+    int i, j, k, l;
+    int axis, dir, order, flipped;
+    float plane[4], d, newplane[4];
+    winding_t *w, *w2;
+    vec3_t mins, maxs, vec, vec2;
+
+    Vector4Copy( planes[ facet->surfacePlane ].plane, plane );
+
+    w = BaseWindingForPlane( plane,  plane[3] );
+    for ( j = 0 ; j < facet->numBorders && w ; j++ ) {
+      if (facet->borderPlanes[j] == facet->surfacePlane) continue;
+      Vector4Copy( planes[ facet->borderPlanes[j] ].plane, plane );
+
+      if ( !facet->borderInward[j] ) {
+        VectorSubtract( vec3_origin, plane, plane );
+        plane[3] = -plane[3];
+      }
+
+      ChopWindingInPlace( &w, plane, plane[3], 0.1f );
+    }
+    if ( !w ) {
+      return;
+    }
+
+    WindingBounds(w, mins, maxs);
+
+    // add the axial planes
+    order = 0;
+    for ( axis = 0 ; axis < 3 ; axis++ )
+    {
+      for ( dir = -1 ; dir <= 1 ; dir += 2, order++ )
+      {
+        VectorClear(plane);
+        plane[axis] = dir;
+        if (dir == 1) {
+          plane[3] = maxs[axis];
+        }
+        else {
+          plane[3] = -mins[axis];
+        }
+        //if it's the surface plane
+        if (CM_PlaneEqual(&planes[facet->surfacePlane], plane, &flipped)) {
+          continue;
+        }
+        // see if the plane is allready present
+        for ( i = 0 ; i < facet->numBorders ; i++ ) {
+          if (CM_PlaneEqual(&planes[facet->borderPlanes[i]], plane, &flipped))
+            break;
+        }
+
+        if ( i == facet->numBorders ) {
+          if (facet->numBorders > 4 + 6 + 16) Com_Printf("ERROR: too many bevels\n");
+          facet->borderPlanes[facet->numBorders] = CM_FindPlane2(plane, &flipped);
+          facet->borderNoAdjust[facet->numBorders] = 0;
+          facet->borderInward[facet->numBorders] = flipped;
+          facet->numBorders++;
+        }
+      }
+    }
+    //
+    // add the edge bevels
+    //
+    // test the non-axial plane edges
+    for ( j = 0 ; j < w->numpoints ; j++ )
+    {
+      k = (j+1)%w->numpoints;
+      VectorSubtract (w->p[j], w->p[k], vec);
+      //if it's a degenerate edge
+      if (VectorNormalize (vec) < 0.5)
+        continue;
+      CM_SnapVector(vec);
+      for ( k = 0; k < 3 ; k++ )
+        if ( vec[k] == -1 || vec[k] == 1 )
+          break;  // axial
+      if ( k < 3 )
+        continue; // only test non-axial edges
+
+      // try the six possible slanted axials from this edge
+      for ( axis = 0 ; axis < 3 ; axis++ )
+      {
+        for ( dir = -1 ; dir <= 1 ; dir += 2 )
+        {
+          // construct a plane
+          VectorClear (vec2);
+          vec2[axis] = dir;
+          CrossProduct (vec, vec2, plane);
+          if (VectorNormalize (plane) < 0.5)
+            continue;
+          plane[3] = DotProduct (w->p[j], plane);
+
+          // if all the points of the facet winding are
+          // behind this plane, it is a proper edge bevel
+          for ( l = 0 ; l < w->numpoints ; l++ )
+          {
+            d = DotProduct (w->p[l], plane) - plane[3];
+            if (d > 0.1)
+              break;  // point in front
+          }
+          if ( l < w->numpoints )
+            continue;
+
+          //if it's the surface plane
+          if (CM_PlaneEqual(&planes[facet->surfacePlane], plane, &flipped)) {
+            continue;
+          }
+          // see if the plane is allready present
+          for ( i = 0 ; i < facet->numBorders ; i++ ) {
+            if (CM_PlaneEqual(&planes[facet->borderPlanes[i]], plane, &flipped)) {
+                break;
+            }
+          }
+
+          if ( i == facet->numBorders ) {
+            if (facet->numBorders > 4 + 6 + 16) Com_Printf("ERROR: too many bevels\n");
+            facet->borderPlanes[facet->numBorders] = CM_FindPlane2(plane, &flipped);
+
+            for ( k = 0 ; k < facet->numBorders ; k++ ) {
+              if (facet->borderPlanes[facet->numBorders] ==
+                facet->borderPlanes[k]) Com_Printf("WARNING: bevel plane already used\n");
+            }
+
+            facet->borderNoAdjust[facet->numBorders] = 0;
+            facet->borderInward[facet->numBorders] = flipped;
+            //
+            w2 = CopyWinding(w);
+            Vector4Copy(planes[facet->borderPlanes[facet->numBorders]].plane, newplane);
+            if (!facet->borderInward[facet->numBorders])
+            {
+              VectorNegate(newplane, newplane);
+              newplane[3] = -newplane[3];
+            } //end if
+            ChopWindingInPlace( &w2, newplane, newplane[3], 0.1f );
+            if (!w2) {
+              Com_DPrintf("WARNING: CM_AddFacetBevels... invalid bevel\n");
+              continue;
+            }
+            else {
+              FreeWinding(w2);
+            }
+            //
+            facet->numBorders++;
+            //already got a bevel
+//          break;
+          }
+        }
+      }
+    }
+    FreeWinding( w );
+
+  #ifndef BSPC
+    //add opposite plane
+    facet->borderPlanes[facet->numBorders] = facet->surfacePlane;
+    facet->borderNoAdjust[facet->numBorders] = 0;
+    facet->borderInward[facet->numBorders] = qtrue;
+    facet->numBorders++;
+  #endif //BSPC
+  }
+  
+  bool validateFacet(Facet facet) {
+    List<double> plane=new List<double>(4);
+    int j;
+    Winding w;
+    List<Vector> bounds; // = new List<Vector>.generate(2, (idx)=>new Vector());
+
+    if ( facet.surfacePlane == -1 ) {
+      return false;
+    }
+
+    VectorCopy( planes[ facet.surfacePlane ].plane, plane );
+    w = BaseWindingForPlane( plane,  plane[3] );
+    for ( j = 0 ; j < facet.numBorders && w ; j++ ) {
+      if ( facet.borderPlanes[j] == -1 ) {
+        return false;
+      }
+      VectorCopy( planes[ facet.borderPlanes[j] ].plane, plane );
+      if ( !facet.borderInward[j] ) {
+        VectorSubtract( vec3_origin, plane, plane );
+        plane[3] = -plane[3];
+      }
+      ChopWindingInPlace( &w, plane, plane[3], 0.1 );
+    }
+
+    if ( !w ) {
+      return false;    // winding was completely chopped away
+    }
+
+    // see if the facet is unreasonably large
+    WindingBounds( w, bounds[0], bounds[1] );
+    FreeWinding( w );
+    
+    for ( j = 0 ; j < 3 ; j++ ) {
+      if ( bounds[1][j] - bounds[0][j] > MAX_MAP_BOUNDS ) {  
+        return false;    // we must be missing a plane
+      }
+      if ( bounds[0][j] >= MAX_MAP_BOUNDS ) {
+        return false;
+      }
+      if ( bounds[1][j] <= -MAX_MAP_BOUNDS ) {
+        return false;
+      }
+    }
+    return true;   // winding is fine
+  }
+  
+  Winding BaseWindingForPlane(List<double> normal, double dist) {
+    int i, x;
+    double max, v;
+    Vector org, vright, vup=new Vector();
+    Winding w;
+    
+// find the major axis
+
+    max = -MAX_MAP_BOUNDS;
+    x = -1;
+    for (i=0 ; i<3; i++)
+    {
+      v = normal[i].abs();
+      if (v > max)
+      {
+        x = i;
+        max = v;
+      }
+    }
+    assert(x!=-1); // Com_Error (ERR_DROP, "BaseWindingForPlane: no axis found");
+      
+    switch (x)
+    {
+      case 0:
+      case 1:
+        vup[2] = 1.0;
+        break;    
+      case 2:
+        vup[0] = 1.0;
+        break;    
+    }
+
+    v = DotProduct (vup.array, normal);
+    VectorMA (vup, -v, normal, vup);
+    vup.normalize();
+      
+    
+    org = new Vector.fromList(normal);
+    
+    vright = new Vector().cross2( vup, org);
+
+    org.scale(dist);
+
+    vup.scale( MAX_MAP_BOUNDS);
+    vright.scale( MAX_MAP_BOUNDS);
+        
+// project a really big axis aligned box onto the plane
+    w = new Winding();
+    w.p[0].set(org).subtract(vright).add(vup);
+    w.p[1].set(org).add(vright).add(vup);
+    w.p[2].set(org).add(vright).subtract(vup);
+    w.p[3].set(org).subtract(vright).subtract(vup);
+    w.numpoints = 4;
+    return w; 
   }
   
   void setBorderInward(Facet facet, Grid grid, List<List<List<int>>> gridPlanes, int i, int j, int which) {
