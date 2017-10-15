@@ -19,8 +19,6 @@ const double SURFACE_CLIP_EPSILON = 0.125;
 int totalPatchBlocks=0;
 int numPlanes;
 List<PatchPlane> planes = new List<PatchPlane>.generate(2048, (idx)=>new PatchPlane());
-int numFacets;
-List<Facet> facets = new List<Facet>.generate(2048, (idx)=>new Facet());
 
 class Grid {
   int width;
@@ -28,6 +26,19 @@ class Grid {
   bool wrapWidth;
   bool wrapHeight;
   List<List<Vector>> points = new List<List<Vector>>.generate(129, (idx)=> new List<Vector>.generate(129, (idx)=>new Vector())); // [width*height] MAX_GRID_SIZE = 129
+  String toString() {
+    StringBuffer sb = new StringBuffer();
+    sb.write("width: $width, height: $height, $wrapWidth, $wrapHeight\n");
+    for ( int i = 0 ; i < width ; i++ ) {
+      for ( int j = 0 ; j < height ; j++ ) {
+        sb.write( points[i][j]);
+        sb.write(',');
+        //print("XXX: "+points[j*width + i].toString());
+      }
+      sb.write('\n');
+    }
+    return sb.toString();
+  }
 }
 
 class Winding {
@@ -51,8 +62,8 @@ class Facet {
   List<bool> borderNoAdjust = new List<bool>(4+6+16);
   
   void set surfacePlane(int surfacePlane) {
-    if( surfacePlane<0)
-      throw new Exception(-1);
+//    if( surfacePlane<0)
+      //throw new Exception(-1);
     _surfacePlane = surfacePlane;
   }
   int get surfacePlane => _surfacePlane;
@@ -60,9 +71,9 @@ class Facet {
 class PatchCollide {
   List<Vector> bounds = new List<Vector>.generate(2, (idx)=>new Vector());
   int numPlanes;      // surface planes plus edge planes
-  List<PatchPlane> planes;
+  List<PatchPlane> planes = new List<PatchPlane>();
   int   numFacets;
-  List<Facet> facets;
+  List<Facet> facets = new List<Facet>();
 }
 class Patch {
   int checkcount;       // to avoid repeated testings
@@ -142,7 +153,6 @@ void patchCollideFromGrid(Grid grid, PatchCollide pc) {
   List<bool> noAdjust = new List<bool>(4);
 
   numPlanes = 0;
-  numFacets = 0;
 
   // find the planes for each triangle of the grid
   for ( i = 0 ; i < grid.width - 1 ; i++ ) {
@@ -207,8 +217,8 @@ void patchCollideFromGrid(Grid grid, PatchCollide pc) {
         borders[EN_RIGHT] = edgePlaneNum( grid, gridPlanes, i, j, 1 );
       }
 
-      assert( numFacets < 1024 ); // MAX_FACETS
-      facet = facets[numFacets] = new Facet();
+      assert( pc.facets.length < 1024 ); // MAX_FACETS
+      pc.facets.add(facet = new Facet());
 
       if ( gridPlanes[i][j][0] == gridPlanes[i][j][1] ) {
         if ( gridPlanes[i][j][0] == -1 ) {
@@ -227,7 +237,8 @@ void patchCollideFromGrid(Grid grid, PatchCollide pc) {
         setBorderInward( facet, grid, gridPlanes, i, j, -1 );
         if ( validateFacet( facet ) ) {
           addFacetBevels( facet );
-          numFacets++;
+        } else {
+          pc.facets.removeLast();
         }
       } else {
         // two seperate triangles
@@ -247,11 +258,12 @@ void patchCollideFromGrid(Grid grid, PatchCollide pc) {
         setBorderInward( facet, grid, gridPlanes, i, j, 0 );
         if ( validateFacet( facet ) ) {
           addFacetBevels( facet );
-          numFacets++;
+        } else {
+          pc.facets.removeLast();
         }
 
-        assert( numFacets < 1024 );
-        facet = facets[numFacets];
+        assert( pc.facets.length < 1024 ); // MAX_FACETS
+        pc.facets.add(facet = new Facet());
         
         // TODO: Com_Memset( facet, 0, sizeof( *facet ) );
 
@@ -271,7 +283,8 @@ void patchCollideFromGrid(Grid grid, PatchCollide pc) {
         setBorderInward( facet, grid, gridPlanes, i, j, 1 );
         if ( validateFacet( facet ) ) {
           addFacetBevels( facet );
-          numFacets++;
+        } else {
+          pc.facets.removeLast();
         }
       }
     }
@@ -279,9 +292,14 @@ void patchCollideFromGrid(Grid grid, PatchCollide pc) {
 
   // copy the results out
   pc.numPlanes = numPlanes;
-  pc.numFacets = numFacets;
-  pc.facets = new List<Facet>.from(facets); // TODO: maybe deep copy needed
-  pc.planes = new List<PatchPlane>.from(planes); // TODO: maybe deep copy needed
+  pc.numFacets = pc.facets.length;
+  
+  pc.planes = new List<PatchPlane>(numPlanes);
+  for(int n=0;n<numPlanes;n++){
+    pc.planes[n] = new PatchPlane();
+    pc.planes[n].plane.setAll(0, planes[n].plane);
+    pc.planes[n].signbits = planes[n].signbits;
+  }
 }
 
 void addFacetBevels(Facet facet) {
@@ -838,7 +856,7 @@ int findPlane(Vector p1, Vector p2, Vector p3) {
   double d;
 
   if ( !planeFromPoints( plane, p1, p2, p3 ) ) {
-    print("planeFromPoints $p1, $p2, $p3");
+    //print("planeFromPoints $p1, $p2, $p3");
     return -1;
   }
 
@@ -1089,7 +1107,7 @@ void setGridWrapWidth(Grid grid) {
 
   for(h=0; h<grid.height; h++) {
     for(j=0; j<3; j++) {
-      //d = grid.points[h*grid.width][j] - grid.points[h*grid.width+grid.width-1][j];
+    //d = grid.points[h*grid.width][j] - grid.points[h*grid.width+grid.width-1][j];
       d = grid.points[0][h][j] - grid.points[grid.width-1][h][j];
       if ( d < -0.1 || d > 0.1 ) { // WRAP_POINT_EPSILON
         break;

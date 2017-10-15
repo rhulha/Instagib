@@ -89,7 +89,7 @@ class BSPParser {
     return drawIndexes;
   }
   
-  getShaders() {
+  List<Shader> getShaders() {
     BinaryReader br = getLump(LumpTypes.Shaders);
 
     List<Shader> shaders = new List<Shader>(br.length ~/ Shader.size);
