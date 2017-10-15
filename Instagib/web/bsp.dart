@@ -71,6 +71,14 @@ class Brushside {
   }
 }
 
+class Output {
+  bool allSolid = false;
+  bool startSolid = false;
+  double fraction = 1.0;
+  Vector endPos = new Vector();
+  Plane plane;
+}
+
 class BSPTree {
   
   List<Node> nodes;
@@ -84,33 +92,27 @@ class BSPTree {
   BSPTree( this.nodes, this.planes, this.leaves, this.brushes, this.leafBrushes, this.textures, this.brushSides);
   
   
-  void trace( Vector start, Vector end, num radius) {
-    var output = {
-        "allSolid": false,
-        "startSolid": false,
-        "fraction": 1.0,
-        "endPos": end,
-        "plane": null
-    };
+  Output trace( Vector start, Vector end, num radius) {
+    var output = new Output(); 
     
     traceNode(0, 0, 1, start, end, radius, output);
     
-    if(output['fraction'] != 1.0) { // collided with something
+    if(output.fraction != 1.0) { // collided with something
         for (int i = 0; i < 3; i++) {
-            output['endPos'][i] = start[i] + output['fraction'] * (end[i] - start[i]);
+            output.endPos[i] = start[i] + output.fraction * (end[i] - start[i]);
         }
     }
     
     return output;
   }
 
-  traceNode(int nodeIdx, num startFraction, num endFraction, Vector start, Vector end, num radius, var output) {
+  void traceNode(int nodeIdx, num startFraction, num endFraction, Vector start, Vector end, num radius, Output output) {
     if (nodeIdx < 0) { // Leaf node?
       Leaf leaf = leaves[-(nodeIdx + 1)];
       for (int i = 0; i < leaf.n_leafbrushes; i++) {
         Brush brush = brushes[leafBrushes[leaf.leafbrush + i]];
         var texture = textures[brush.texture];
-        if (brush.n_brushsides > 0 && texture.contents & 1) {
+        if (brush.n_brushsides > 0 && ((texture['contents'] & 1) == 1)) {
           this.traceBrush(brush, start, end, radius, output);
         }
       }
@@ -172,15 +174,17 @@ class BSPTree {
     }
   }
 
-  void traceBrush(brush, start, end, radius, output) {
+  void traceBrush( Brush brush, Vector start, Vector end, double radius, Output output) {
     double startFraction = -1.0;
     double endFraction = 1.0;
     bool startsOut = false;
     bool endsOut = false;
     Plane collisionPlane = null;
     
-    for (int i = 0; i < brush.brushSideCount; i++) {
-        Brushside brushSide = brushSides[brush.brushSide + i];
+    for (int i = 0; i < brush.n_brushsides; i++) {
+        if( brush.brushside + i > brushSides.length)
+          break;
+        Brushside brushSide = brushSides[brush.brushside + i];
         Plane plane = planes[brushSide.plane];
         
         double startDist = start.dot(plane.normal ) - (plane.distance + radius);

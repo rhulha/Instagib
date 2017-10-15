@@ -6,6 +6,9 @@ class FPSCamera extends Animatable
   Vector momentum = new Vector();
   Vector movement = new Vector();
   Vector tmp = new Vector();
+
+  Vector traceStart = new Vector();
+  Vector traceEnd = new Vector();
   
   BSPTree bsp;
   
@@ -58,7 +61,18 @@ class FPSCamera extends Animatable
     momentum.add(movement);
     tmp.set(momentum);
     tmp.scale(0.02);
-    camera.translateFromVec(tmp);
+    
+    traceStart.set(camera.getPos());
+    traceEnd.set(camera.getPos());
+    traceEnd.add(tmp);
+    
+    traceStart.scale(100); // we draw the map 100 times smaller
+    traceEnd.scale(100);
+    
+    Output output = bsp.trace( traceStart, traceEnd, 10.0);
+    print( output.fraction);
+    if( output.fraction == 1.0 || output.startSolid || output.allSolid )
+        camera.translateFromVec(tmp);
     momentum.scale( 0.85);
     
     if( cpk[Key.SPACE] != null) {

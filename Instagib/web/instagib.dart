@@ -7,18 +7,20 @@ import 'dart:typed_data';
 
 part 'bsp.dart';
 part 'FPSCamera.dart';
+part 'QuakeCamera.dart';
 part 'sobel_shader.dart';
 
 void main() {
   
+  skipDefaultMouseMoveListener = true;
   ChronosGL chronosGL = new ChronosGL('#webgl-canvas', useFramebuffer:false, fxShader: getSobelShader(), far:2520.0);
   
-  // gl.enable(gl.CULL_FACE);
+  //chronosGL.getRenderingContext().enable( 0x0B44);//RenderingContext.CULL_FACE
   
   Camera camera = chronosGL.getCamera();
   camera.setPos( 0.0, 0.0, 6.0 );
   camera.lookAt(new Vector(1.0, 0.0, 6.0), new Vector(0.0,0.0,1.0));
-  FPSCamera fpscam = new FPSCamera(camera);
+  QuakeCamera fpscam = new QuakeCamera(camera);
   chronosGL.addAnimatable('fpscam', fpscam);
   
   Utils utils = chronosGL.getUtils();
