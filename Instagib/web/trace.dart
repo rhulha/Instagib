@@ -82,11 +82,7 @@ class BSPTree {
 
   TraceWork tw = new TraceWork();
 
-  Trace simpleTrace(Vector start, Vector end, Vector mins, Vector maxs) {
-    return trace(start, end, mins: mins, maxs: maxs);
-  }
-
-  Trace trace(Vector start, Vector end, {Vector mins, Vector maxs, int modelClipHandle: 0, Vector origin, int brushmask: 0, bool capsule: false} /*, Sphere sphere*/) {
+  Trace trace(Vector start, Vector end, [Vector mins, Vector maxs, int modelClipHandle=0, Vector origin, int brushmask=0, bool capsule=false] /*, Sphere sphere*/) {
     Float32List offset = new Float32List(3);
 
     cm.checkcount++; // TODO: check all
@@ -143,8 +139,6 @@ class BSPTree {
       tw.extents[1] = tw.size[1][1];
       tw.extents[2] = tw.size[1][2];
     }
-
-
 
     traceThroughTree(tw, 0, 0.0, 1.0, start, end);
 
