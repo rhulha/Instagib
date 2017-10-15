@@ -7,7 +7,7 @@ class Trace {
   bool startSolid = false;
   double fraction = 1.0;
   Vector endPos = new Vector();
-  Plane plane = new Plane();
+  Plane plane = null; // new Plane(); // new Plane gets us stuck for some weird reason
   int surfaceFlags; // surface hit
   int contents; // contents on other side of surface hit
   int entityNum; // entity the contacted sirface is a part of
@@ -17,7 +17,8 @@ class Trace {
     startSolid = false;
     fraction = 1.0;
     endPos.scale(0);
-    plane.clear();
+    plane = null;
+    //plane.clear(); //TODO: weird
     surfaceFlags = 0;
     contents = 0;
     entityNum = 0;
@@ -28,9 +29,14 @@ class Trace {
     startSolid = trace.startSolid;
     fraction = trace.fraction;
     endPos.set(trace.endPos);
-    plane.normal.set(trace.plane.normal);
-    plane.dist = trace.plane.dist;
-    plane.setTypeAndSignbits();
+    if( trace.plane != null) {
+      if( plane == null) plane = new Plane();
+      plane.normal.set(trace.plane.normal);
+      plane.dist = trace.plane.dist;
+      plane.setTypeAndSignbits();
+    } else {
+      plane = null;
+    }
     surfaceFlags = trace.surfaceFlags;
     contents = trace.contents;
     entityNum = trace.entityNum;
