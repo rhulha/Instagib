@@ -2,13 +2,13 @@ part of instagib;
 
 double q3bsptree_trace_offset = 0.03125;
 
-class Node {
+class BSPNode {
   int plane;
   List<int> children;
   List<int> mins;
   List<int> maxs;
-  Node.init( this.plane, this.children, this.mins, this.maxs);
-  Node( Int32List data) {
+  BSPNode.init( this.plane, this.children, this.mins, this.maxs);
+  BSPNode( Int32List data) {
     plane = data[0];
     children = data.sublist(1, 3);
     mins = data.sublist(3, 6);
@@ -81,7 +81,7 @@ class Output {
 
 class BSPTree {
   
-  List<Node> nodes;
+  List<BSPNode> nodes;
   List<Plane> planes;
   List<Leaf> leaves;
   List<Brush> brushes;
@@ -121,7 +121,7 @@ class BSPTree {
     }
     
     // Tree node
-    Node node = nodes[nodeIdx];
+    BSPNode node = nodes[nodeIdx];
     Plane plane = planes[node.plane];
     
     double startDist = plane.normal.dot(start) - plane.distance;

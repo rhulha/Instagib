@@ -50,8 +50,10 @@ class QuakeCamera extends Animatable
       e.preventDefault();
       if( HTML.document.pointerLockElement != HTML.document.body)
         HTML.document.body.requestPointerLock();
-      else
+      else {
         snd.playSound('rail');
+        addLaser(camera, 0, -0.2);
+      }
     });
     
     HTML.document.body.onMouseMove.listen( (HTML.MouseEvent e) {
@@ -193,7 +195,7 @@ class QuakeCamera extends Animatable
     if(!onGround) { return false; }
     
     onGround = false;
-    velocity[2] = q3movement_jumpvelocity*2;
+    velocity[2] = q3movement_jumpvelocity*2.5;
     
     //Make sure that the player isn't stuck in the ground
     double groundDist = position.dot( groundTrace.plane.normal ) - groundTrace.plane.distance - q3movement_playerRadius;

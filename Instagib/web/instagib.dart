@@ -1,6 +1,7 @@
 library instagib;
 
 import 'dart:html' as HTML;
+import 'dart:math' as Math;
 import 'dart:async';
 import 'package:ChronosGL/chronos_gl.dart';
 import 'dart:typed_data';
@@ -9,24 +10,29 @@ import 'sound.dart';
 part 'bsp.dart';
 part 'QuakeCamera.dart';
 part 'sobel_shader.dart';
+part 'laser.dart';
 
+ChronosGL chronosGL;
+Camera camera;
+TextureCache textureCache;
 Sound snd = new Sound();
 
 void main() {
   
   skipDefaultMouseMoveListener = true;
-  ChronosGL chronosGL = new ChronosGL('#webgl-canvas', useFramebuffer:false, fxShader: getSobelShader(), far:2520.0);
+  chronosGL = new ChronosGL('#webgl-canvas', useFramebuffer:false, fxShader: getSobelShader(), far:2520.0);
   
   //chronosGL.getRenderingContext().enable( 0x0B44);//RenderingContext.CULL_FACE
   
-  Camera camera = chronosGL.getCamera();
+  camera = chronosGL.getCamera();
   camera.setPos( 0.0, 0.0, 6.0 );
   camera.lookAt(new Vector(1.0, 0.0, 6.0), new Vector(0.0,0.0,1.0));
   QuakeCamera fpscam = new QuakeCamera(camera);
   chronosGL.addAnimatable('fpscam', fpscam);
   
   Utils utils = chronosGL.getUtils();
-  TextureCache textureCache = chronosGL.getTextureCache();
+  textureCache = chronosGL.getTextureCache();
+  textureCache.addSolidColor("red", "rgba(255,0,0,255)");
   textureCache.add("textures/skybox_nx.png");
   textureCache.add("textures/skybox_px.png");
   textureCache.add("textures/skybox_ny.png");
@@ -64,9 +70,9 @@ void main() {
       Uint16List xs = new Uint16List.view( list[1]);
 
       Int32List nodes = new Int32List.view( list[2]);
-      List<Node> nodes2 = new List<Node>(nodes.length~/9);
+      List<BSPNode> nodes2 = new List<BSPNode>(nodes.length~/9);
       for( int i=0;i<nodes2.length;i++) {
-        nodes2[i] = new Node(nodes.sublist(i*9, i*9+9));
+        nodes2[i] = new BSPNode(nodes.sublist(i*9, i*9+9));
       }
       
       Float32List planes = new Float32List.view( list[3]);
