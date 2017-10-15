@@ -1,41 +1,16 @@
 library instagib;
 
-import 'dart:html' as HTML;
 import 'dart:async';
 import 'package:ChronosGL/chronos_gl.dart';
 import 'dart:typed_data';
-import 'dart:convert';
 
 part 'bsp.dart';
 part 'FPSCamera.dart';
-
-Future<Object> loadBinaryFile(String url)
-{
-  Completer c = new Completer();
-  HTML.HttpRequest hr = new HTML.HttpRequest();
-  hr.responseType = "arraybuffer";
-  hr.open("GET", url);
-  hr.onLoadEnd.listen( (e) {
-    c.complete(hr.response);
-  });
-  hr.send();
-  return c.future;
-}
-
-Future<Object> loadJsonFile(String url)
-{
-  Completer c = new Completer();
-  HTML.HttpRequest hr = new HTML.HttpRequest();
-  hr.open("GET", url);
-  hr.onLoadEnd.listen( (e) {
-    c.complete(JSON.decode( hr.responseText));
-  });
-  hr.send();
-  return c.future;
-}
+part 'sobel_shader.dart';
 
 void main() {
-  ChronosGL chronosGL = new ChronosGL('#webgl-canvas', false);
+  
+  ChronosGL chronosGL = new ChronosGL('#webgl-canvas', useFramebuffer:true, fxShader: getSobelShader());
   
   // gl.enable(gl.CULL_FACE);
   
@@ -56,23 +31,25 @@ void main() {
     
     utils.addSkybox( "textures/skybox_", ".png", "nx", "px", "nz", "pz", "ny", "py");
     
-    ShaderProgram sp = chronosGL.getShaderLib().createFixedVertexColorShaderProgram();
+    ShaderProgram sp = chronosGL.createProgram( 'Normal2Color', chronosGL.getShaderLib().createNormal2ColorShader());
     
-    var verts = loadBinaryFile( 'data/q3dm17.verts');
-    var indices = loadBinaryFile( 'data/q3dm17.indices');
+    var indices = utils.loadBinaryFile( 'data/q3dm17.indices');
+    var verts = utils.loadBinaryFile( 'data/q3dm17.verts');
+    var normals = utils.loadBinaryFile( 'data/q3dm17.normals');
     
-    var nodes = loadBinaryFile( 'data/q3dm17.nodes');
-    var planes = loadBinaryFile( 'data/q3dm17.planes');
-    var leaves = loadBinaryFile( 'data/q3dm17.leafs');
-    var brushes = loadBinaryFile( 'data/q3dm17.brushes');
-    var leafBrushes = loadBinaryFile( 'data/q3dm17.leafbrushes');
-    var brushSides = loadBinaryFile( 'data/q3dm17.brushsides');
+    var nodes = utils.loadBinaryFile( 'data/q3dm17.nodes');
+    var planes = utils.loadBinaryFile( 'data/q3dm17.planes');
+    var leaves = utils.loadBinaryFile( 'data/q3dm17.leafs');
+    var brushes = utils.loadBinaryFile( 'data/q3dm17.brushes');
+    var leafBrushes = utils.loadBinaryFile( 'data/q3dm17.leafbrushes');
+    var brushSides = utils.loadBinaryFile( 'data/q3dm17.brushsides');
     
-    var textures = loadJsonFile( 'data/q3dm17.textures');
-    var entities = loadJsonFile( 'data/q3dm17.ents');
+    var textures = utils.loadJsonFile( 'data/q3dm17.textures');
+    var entities = utils.loadJsonFile( 'data/q3dm17.ents');
     
-    Future.wait([verts, indices, nodes, planes, leaves, brushes, leafBrushes, textures, brushSides]).then( (List list) {
+    Future.wait([verts, indices, nodes, planes, leaves, brushes, leafBrushes, textures, brushSides, normals]).then( (List list) {
       Float32List vs = new Float32List.view( list[0]);
+      Float32List ns = new Float32List.view( list[9]);
       Uint16List xs = new Uint16List.view( list[1]);
 
       Int32List nodes = new Int32List.view( list[2]);
@@ -117,7 +94,7 @@ void main() {
         vs[a] = vs[a] / 100;
       }
       
-      sp.add( new MeshData(vertices: vs, vertexIndices: xs).createMesh());
+      sp.add( new MeshData(vertices: vs, normals: ns, vertexIndices: xs).createMesh());
       chronosGL.run();
     });
 
