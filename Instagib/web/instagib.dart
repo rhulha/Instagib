@@ -41,13 +41,13 @@ void main() {
   Utils utils = chronosGL.getUtils();
   textureCache = chronosGL.getTextureCache();
   textureCache.addSolidColor("red", "rgba(255,0,0,255)");
-  textureCache.add("textures/skybox_nx.png");
-  textureCache.add("textures/skybox_px.png");
-  textureCache.add("textures/skybox_ny.png");
-  textureCache.add("textures/skybox_py.png");
-  textureCache.add("textures/skybox_nz.png");
-  textureCache.add("textures/skybox_pz.png");
-  
+  ["nx", "px", "nz", "pz", "ny", "py"].forEach((n)=>textureCache.add("textures/skybox_$n.png"));
+//  textureCache.add("textures/skybox_nx.png");
+//  textureCache.add("textures/skybox_px.png");
+//  textureCache.add("textures/skybox_ny.png");
+//  textureCache.add("textures/skybox_py.png");
+//  textureCache.add("textures/skybox_nz.png");
+//  textureCache.add("textures/skybox_pz.png");
   
   snd.loadSound('data/jump1.wav', 'jump');
   snd.loadSound('data/railgf1a.wav', 'rail');
@@ -57,24 +57,9 @@ void main() {
     utils.addSkybox( "textures/skybox_", ".png", "nx", "px", "nz", "pz", "ny", "py");
     
     chronosGL.getUtils().loadBinaryFile("data/q3dm17.bsp").then((ByteBuffer bspFile){
-      ClipMap cm = new ClipMap();
       BSPParser parser = new BSPParser(bspFile);
-      
-      cm.shaders = parser.getShaders();
-      cm.surfaces = parser.getSurfaces();
-      cm.drawVerts = parser.getDrawVerts();
-      cm.drawIndexes = parser.getDrawIndexes();
-
-      
-      cm.surfacesUntessellated = new List<Surface>.generate(cm.surfaces.length, (int idx)=>new Surface.copy(cm.surfaces[idx]));
-      
-      for (Surface surface in cm.surfaces) {
-        if (surface.surfaceType == Surface.patch) {
-          //print("tessellate");
-          tessellate(surface, cm.drawVerts, cm.drawIndexes, 20);
-        }
-      }
-
+      ClipMap cm = parser.getClipMap();
+            
       changeColors(cm.surfaces, cm.drawIndexes, cm.shaders, cm.drawVerts);
       
       List<double> vertsList = new List<double>();
@@ -92,21 +77,12 @@ void main() {
         colorsList.addAll(vertex.color);
       }
 
-
       List<int> indicesList = removeUnneededObjects(cm.surfaces, cm.shaders, cm.drawIndexes);
 
       Uint16List  xs = new Uint16List.fromList(indicesList);
       Float32List vs = new Float32List.fromList(vertsList);
       Float32List ns = new Float32List.fromList(normalsList);
       Float32List cs = new Float32List.fromList(colorsList);
-
-      cm.nodes = BSPNode.parse(parser.getLump(LumpTypes.Nodes));
-      cm.planes = Plane.parse(parser.getLump(LumpTypes.Planes));
-      cm.leafs = Leaf.parse(parser.getLump(LumpTypes.Leafs));
-      cm.leafSurfaces = parser.getLump(LumpTypes.LeafSurfaces).readAllSignedInts();
-      cm.leafBrushes = parser.getLump(LumpTypes.LeafBrushes).readAllSignedInts();
-      cm.brushes = Brush.parse(parser.getLump(LumpTypes.Brushes));
-      cm.brushSides = Brushside.parse(parser.getLump(LumpTypes.BrushSides));
 
       BSPTree bspTree = new BSPTree(cm);
       fpscam.setBSPTree( bspTree);
