@@ -24,29 +24,74 @@ ShaderObject getSobelShader() {
   precision mediump float;
   
   varying vec2 vTextureCoord;
-  uniform sampler2D uSampler;
+  uniform sampler2D colorSampler;
+  uniform sampler2D depthSampler;
   
-  float lum(vec4 c) {
+  float lum_c(vec4 c) {
     return dot(c.xyz, vec3(0.3, 0.59, 0.11));
   }
 
+  float linearizeDepth(float z)
+  {
+    float n = 1.0; // camera z near
+    float f = 520.0; // camera z far
+    return (2.0 * n) / (f + n - z * (f - n)); 
+  }
+
+  float lum_d(vec4 c) {
+    return linearizeDepth(c.x);
+  }
+
+  float sobel_c(sampler2D colorSampler) {
+      vec2 imageIncrement = vec2(1.0/1920.0,1.0/900.0);
+      float t00 = lum_c(texture2D(colorSampler, vTextureCoord + imageIncrement * vec2(-1, -1)));
+      float t10 = lum_c(texture2D(colorSampler, vTextureCoord + imageIncrement * vec2( 0, -1)));
+      float t20 = lum_c(texture2D(colorSampler, vTextureCoord + imageIncrement * vec2( 1, -1)));
+      float t01 = lum_c(texture2D(colorSampler, vTextureCoord + imageIncrement * vec2(-1,  0)));
+      float t21 = lum_c(texture2D(colorSampler, vTextureCoord + imageIncrement * vec2( 1,  0)));
+      float t02 = lum_c(texture2D(colorSampler, vTextureCoord + imageIncrement * vec2(-1,  1)));
+      float t12 = lum_c(texture2D(colorSampler, vTextureCoord + imageIncrement * vec2( 0,  1)));
+      float t22 = lum_c(texture2D(colorSampler, vTextureCoord + imageIncrement * vec2( 1,  1)));
+      vec2 grad;
+      grad.x = t00 + 2.0 * t01 + t02 - t20 - 2.0 * t21 - t22;
+      grad.y = t00 + 2.0 * t10 + t20 - t02 - 2.0 * t12 - t22;
+      return length(grad);
+  } 
+
+  float sobel_d(sampler2D colorSampler) {
+      vec2 imageIncrement = vec2(1.0/1920.0,1.0/900.0);
+      float t00 = lum_d(texture2D(colorSampler, vTextureCoord + imageIncrement * vec2(-1, -1)));
+      float t10 = lum_d(texture2D(colorSampler, vTextureCoord + imageIncrement * vec2( 0, -1)));
+      float t20 = lum_d(texture2D(colorSampler, vTextureCoord + imageIncrement * vec2( 1, -1)));
+      float t01 = lum_d(texture2D(colorSampler, vTextureCoord + imageIncrement * vec2(-1,  0)));
+      float t21 = lum_d(texture2D(colorSampler, vTextureCoord + imageIncrement * vec2( 1,  0)));
+      float t02 = lum_d(texture2D(colorSampler, vTextureCoord + imageIncrement * vec2(-1,  1)));
+      float t12 = lum_d(texture2D(colorSampler, vTextureCoord + imageIncrement * vec2( 0,  1)));
+      float t22 = lum_d(texture2D(colorSampler, vTextureCoord + imageIncrement * vec2( 1,  1)));
+      vec2 grad;
+      grad.x = t00 + 2.0 * t01 + t02 - t20 - 2.0 * t21 - t22;
+      grad.y = t00 + 2.0 * t10 + t20 - t02 - 2.0 * t12 - t22;
+      return length(grad);
+  } 
+
   void main(void) {
 
-    vec2 imageIncrement = vec2(1.0/1920.0,1.0/900.0);
+    if( true )
+    {
+      float len_d = sobel_d(depthSampler);
+      float len_c = sobel_c(colorSampler);
+      float len = len_d + len_c;
+      if( len > 1.0 ) len = 1.0;
+      //len = 1.0 - len; 
+      gl_FragColor = vec4(0.0, len, len, 1.0);
+    } else {
 
-    float t00 = lum(texture2D(uSampler, vTextureCoord + imageIncrement * vec2(-1, -1)));
-    float t10 = lum(texture2D(uSampler, vTextureCoord + imageIncrement * vec2( 0, -1)));
-    float t20 = lum(texture2D(uSampler, vTextureCoord + imageIncrement * vec2( 1, -1)));
-    float t01 = lum(texture2D(uSampler, vTextureCoord + imageIncrement * vec2(-1,  0)));
-    float t21 = lum(texture2D(uSampler, vTextureCoord + imageIncrement * vec2( 1,  0)));
-    float t02 = lum(texture2D(uSampler, vTextureCoord + imageIncrement * vec2(-1,  1)));
-    float t12 = lum(texture2D(uSampler, vTextureCoord + imageIncrement * vec2( 0,  1)));
-    float t22 = lum(texture2D(uSampler, vTextureCoord + imageIncrement * vec2( 1,  1)));
-    vec2 grad;
-    grad.x = t00 + 2.0 * t01 + t02 - t20 - 2.0 * t21 - t22;
-    grad.y = t00 + 2.0 * t10 + t20 - t02 - 2.0 * t12 - t22;
-    float len = length(grad);
-    gl_FragColor = vec4(len, len, len, 1.0);
+      vec4 texel = texture2D(colorSampler, vTextureCoord);
+      //vec4 texel = texture2D(depthSampler, vTextureCoord);
+      //texel = vec4(vec3(linearizeDepth(texel.x)), 1.0);
+
+      gl_FragColor = texel;
+    }
   }
   """;
   
@@ -54,7 +99,8 @@ ShaderObject getSobelShader() {
   shaderObject.textureCoordinatesAttribute = "aTextureCoord";
   shaderObject.modelViewMatrixUniform = "uMVMatrix";
   shaderObject.perpectiveMatrixUniform = "uPMatrix";
-  shaderObject.textureSamplerUniform = "uSampler";
+  shaderObject.textureSamplerUniform = "colorSampler";
+  shaderObject.texture2SamplerUniform = "depthSampler";
   
   return shaderObject;
 }

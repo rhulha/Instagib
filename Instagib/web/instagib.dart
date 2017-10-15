@@ -10,7 +10,7 @@ part 'sobel_shader.dart';
 
 void main() {
   
-  ChronosGL chronosGL = new ChronosGL('#webgl-canvas', useFramebuffer:true, fxShader: getSobelShader());
+  ChronosGL chronosGL = new ChronosGL('#webgl-canvas', useFramebuffer:true, fxShader: getSobelShader(), far:520.0);
   
   // gl.enable(gl.CULL_FACE);
   
@@ -87,8 +87,6 @@ void main() {
 
       BSPTree bspTree = new BSPTree(nodes2, planes2, leaves2, brushes2, leafBrushes, textures, brushSides2);
       fpscam.setBSPTree( bspTree);
-      
-      print(list[7][0]['name']);
       
       for( var a =0; a<vs.length ;a++) {
         vs[a] = vs[a] / 100;
