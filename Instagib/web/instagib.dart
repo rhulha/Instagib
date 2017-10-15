@@ -110,8 +110,9 @@ void main() {
       myBSP.nodes = BSPNode.parse(parser.getLump(LumpTypes.Nodes));
       myBSP.planes = Plane.parse(parser.getLump(LumpTypes.Planes));
       myBSP.leafs = Leaf.parse(parser.getLump(LumpTypes.Leafs)); // TODO: rename
-      myBSP.brushes = Brush.parse(parser.getLump(LumpTypes.Brushes));
+      myBSP.leafSurfaces = parser.getLump(LumpTypes.LeafSurfaces).readAllSignedInts();
       myBSP.leafBrushes = parser.getLump(LumpTypes.LeafBrushes).readAllSignedInts();
+      myBSP.brushes = Brush.parse(parser.getLump(LumpTypes.Brushes));
       myBSP.brushSides = Brushside.parse(parser.getLump(LumpTypes.BrushSides));
 
       BSPTree bspTree = new BSPTree(myBSP);

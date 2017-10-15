@@ -6,7 +6,7 @@ class MyBSP {
   List<Plane> planes;
   List<BSPNode> nodes;
   List<Leaf> leafs;
-  var leafSurfaces;
+  Int32List leafSurfaces;
   Int32List leafBrushes;
   var models;
   List<Brush> brushes;

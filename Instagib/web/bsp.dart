@@ -9,6 +9,9 @@ class Output {
   double fraction = 1.0;
   Vector endPos = new Vector();
   Plane plane;
+  int surfaceFlags; // surface hit
+  int contents; // contents on other side of surface hit
+  int entityNum;  // entity the contacted sirface is a part of
 }
 
 class BSPTree {
@@ -45,17 +48,164 @@ class BSPTree {
     
     return output;
   }
+  
+  void traceThroughLeaf(int nodeIdx, Vector start, Vector end, double radius, Output output) {
+    Leaf leaf = myBSP.leafs[-(nodeIdx + 1)];
+    for( int i = 0; i < leaf.numLeafBrushes; i++) {
+      Brush brush = myBSP.brushes[myBSP.leafBrushes[leaf.firstLeafBrush + i]];
+      Shader shader = myBSP.shaders[brush.shaderNum];
+      if( brush.numSides > 0 && ((shader.contentFlags & 1) == 1)) {
+        this.traceThroughBrush( brush, start, end, radius, output);
+      }
+    }
+    
+    for ( int k = 0 ; k < leaf.numLeafSurfaces; k++ ) {
+      Patch patch = patches[ myBSP.leafSurfaces[ leaf.firstLeafSurface + k ] ];
+      if ( patch == null) {
+        continue;
+      }
+      //if ( patch.checkcount == cm.checkcount ) {
+      //  continue; // already checked this patch in another leaf      }
+      //patch->checkcount = cm.checkcount;
+
+      //if ( !(patch->contents & tw->contents) ) {
+        //continue;      }
+      
+      traceThroughPatch( output, patch );
+      //if ( !tw->trace.fraction ) {
+        //return;      }
+    }
+
+  }
+  
+  void traceThroughPatch(Output output, Patch patch) {
+    //c_patch_traces++;
+
+    double oldFrac = output.fraction;
+
+    traceThroughPatchCollide( output, patch.pc );
+
+    if ( output.fraction < oldFrac ) {
+      output.surfaceFlags = patch.surfaceFlags;
+      output.contents = patch.contents;
+    }
+
+  }
+  
+  void traceThroughPatchCollide(Output output, PatchCollide pc) {
+    int j, hit, hitnum;
+    double offset, enterFrac, leaveFrac, t;
+    PatchPlane planes;
+    Facet facet;
+    List<double> plane, bestplane; // [4]
+    Vector startp = new Vector(), endp = new Vector();
+
+    //if (tw->isPoint) {
+      //CM_TracePointThroughPatchCollide( tw, pc );
+      //return;    }
+
+    
+    for( int i=0 ; i < pc.numFacets; i++ ) {
+      facet = pc.facets[i];
+      enterFrac = -1.0;
+      leaveFrac = 1.0;
+      hitnum = -1;
+      //
+      planes = pc.planes[ facet.surfacePlane ];
+      VectorCopy(planes.plane, plane);
+      plane[3] = planes->plane[3];
+      if ( tw->sphere.use ) {
+        // adjust the plane distance apropriately for radius
+        plane[3] += tw->sphere.radius;
+
+        // find the closest point on the capsule to the plane
+        t = DotProduct( plane, tw->sphere.offset );
+        if ( t > 0.0f ) {
+          VectorSubtract( tw->start, tw->sphere.offset, startp );
+          VectorSubtract( tw->end, tw->sphere.offset, endp );
+        }
+        else {
+          VectorAdd( tw->start, tw->sphere.offset, startp );
+          VectorAdd( tw->end, tw->sphere.offset, endp );
+        }
+      }
+      else {
+        offset = DotProduct( tw->offsets[ planes->signbits ], plane);
+        plane[3] -= offset;
+        VectorCopy( tw->start, startp );
+        VectorCopy( tw->end, endp );
+      }
+
+      if (!CM_CheckFacetPlane(plane, startp, endp, &enterFrac, &leaveFrac, &hit)) {
+        continue;
+      }
+      if (hit) {
+        Vector4Copy(plane, bestplane);
+      }
+
+      for ( j = 0; j < facet->numBorders; j++ ) {
+        planes = &pc->planes[ facet->borderPlanes[j] ];
+        if (facet->borderInward[j]) {
+          VectorNegate(planes->plane, plane);
+          plane[3] = -planes->plane[3];
+        }
+        else {
+          VectorCopy(planes->plane, plane);
+          plane[3] = planes->plane[3];
+        }
+        if ( tw->sphere.use ) {
+          // adjust the plane distance apropriately for radius
+          plane[3] += tw->sphere.radius;
+
+          // find the closest point on the capsule to the plane
+          t = DotProduct( plane, tw->sphere.offset );
+          if ( t > 0.0f ) {
+            VectorSubtract( tw->start, tw->sphere.offset, startp );
+            VectorSubtract( tw->end, tw->sphere.offset, endp );
+          }
+          else {
+            VectorAdd( tw->start, tw->sphere.offset, startp );
+            VectorAdd( tw->end, tw->sphere.offset, endp );
+          }
+        }
+        else {
+          // NOTE: this works even though the plane might be flipped because the bbox is centered
+          offset = DotProduct( tw->offsets[ planes->signbits ], plane);
+          plane[3] += fabs(offset);
+          VectorCopy( tw->start, startp );
+          VectorCopy( tw->end, endp );
+        }
+
+        if (!CM_CheckFacetPlane(plane, startp, endp, &enterFrac, &leaveFrac, &hit)) {
+          break;
+        }
+        if (hit) {
+          hitnum = j;
+          Vector4Copy(plane, bestplane);
+        }
+      }
+      if (j < facet->numBorders) continue;
+      //never clip against the back side
+      if (hitnum == facet->numBorders - 1) continue;
+
+      if (enterFrac < leaveFrac && enterFrac >= 0) {
+        if (enterFrac < tw->trace.fraction) {
+          if (enterFrac < 0) {
+            enterFrac = 0;
+          }
+
+          tw->trace.fraction = enterFrac;
+          VectorCopy( bestplane, tw->trace.plane.normal );
+          tw->trace.plane.dist = bestplane[3];
+        }
+      }
+    }
+
+  }
 
   void traceThroughTree( int nodeIdx, double startFraction, double endFraction, Vector start, Vector end, double radius, Output output) {
     if( nodeIdx < 0) { // Leaf node?
-      Leaf leaf = myBSP.leafs[-(nodeIdx + 1)];
-      for( int i = 0; i < leaf.numLeafBrushes; i++) {
-        Brush brush = myBSP.brushes[myBSP.leafBrushes[leaf.firstLeafBrush + i]];
-        Shader shader = myBSP.shaders[brush.shaderNum];
-        if( brush.numSides > 0 && ((shader.contentFlags & 1) == 1)) {
-          this.traceThroughBrush( brush, start, end, radius, output);
-        }
-      }
+      traceThroughLeaf(nodeIdx, start, end, radius, output);
       return;
     }
     
