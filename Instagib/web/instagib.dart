@@ -21,7 +21,7 @@ part 'structs/brushside.dart';
 part 'structs/patch.dart';
 part 'structs/plane.dart';
 part 'structs/bsp_node.dart';
-part 'structs/my_bsp.dart';
+part 'structs/clipmap.dart';
 
 ChronosGL chronosGL;
 Camera camera;
