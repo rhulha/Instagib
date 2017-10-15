@@ -2,135 +2,6 @@ part of instagib;
 
 double q3bsptree_trace_offset = 0.03125;
 
-class MyBSP {
-  var entities;
-  List<Shader> shaders;
-  List<Plane> planes;
-  List<BSPNode> nodes;
-  List<Leaf> leafs;
-  var leafSurfaces;
-  Int32List leafBrushes;
-  var models;
-  List<Brush> brushes;
-  List<Brushside> brushSides;
-  List<Vertex> drawVerts;
-  List<int> drawIndexes;
-  var fogs;
-  List<Surface> surfaces;
-  var lightmaps;
-  var lghtGrid5;
-  var visibility;
-}
-
-class BSPNode {
-  int planeNum;
-  List<int> children;
-  List<int> mins;
-  List<int> maxs;
-  BSPNode.init( this.planeNum, this.children, this.mins, this.maxs);
-  BSPNode( BinaryReader br) {
-    planeNum = br.readOneSignedInt();
-    children = br.readSignedInt(2);
-    mins = br.readSignedInt(3);
-    maxs = br.readSignedInt(3);
-  }
-  static List<BSPNode> parse(BinaryReader br) {
-    int count = br.length~/(9*4); // 9 * int32
-    List<BSPNode> nodes = new List<BSPNode>(count);
-    for( int i=0;i<count;i++) {
-      nodes[i] = new BSPNode(br);
-    }
-    return nodes;
-  }
-}
-
-class Plane {
-  Vector normal;
-  double dist;
-  Plane.init( this.normal, this.dist);
-  Plane( BinaryReader br) {
-    normal = new Vector.useList(br.readFloat(3));
-    dist = br.readOneFloat();
-  }
-  static List<Plane> parse(BinaryReader br) {
-    int count = br.length~/(4*4); // 9 * float32
-    List<Plane> planes = new List<Plane>(count);
-    for( int i=0;i<count;i++) {
-      planes[i] = new Plane(br);
-    }
-    return planes;
-  }
-}
-
-class Leaf {
-  int cluster;
-  int area;
-  List<int> mins;
-  List<int> maxs;
-  int firstLeafSurface;
-  int numLeafSurfaces;
-  int firstLeafBrush;
-  int numLeafBrushes;
-  Leaf.init(this.cluster, this.area, this.mins, this.maxs, this.firstLeafSurface, this.numLeafSurfaces, this.firstLeafBrush, this.numLeafBrushes);
-  Leaf( BinaryReader br) {
-    cluster = br.readOneSignedInt();
-    area = br.readOneSignedInt();
-    mins = br.readSignedInt(3);
-    maxs = br.readSignedInt(3);
-    firstLeafSurface = br.readOneSignedInt();
-    numLeafSurfaces = br.readOneSignedInt();
-    firstLeafBrush = br.readOneSignedInt();
-    numLeafBrushes = br.readOneSignedInt();
-  }
-  static List<Leaf> parse(BinaryReader br) {
-    int count = br.length~/(12*4); // 12 * int32
-    List<Leaf> leafs = new List<Leaf>(count);
-    for( int i=0;i<count;i++) {
-      leafs[i] = new Leaf(br);
-    }
-    return leafs;
-  }
-}
-
-class Brush {
-  int firstSide;
-  int numSides;
-  int shaderNum;
-  Brush.init( this.firstSide, this.numSides, this.shaderNum);
-  Brush( BinaryReader br) {
-    firstSide = br.readOneSignedInt();
-    numSides = br.readOneSignedInt();
-    shaderNum = br.readOneSignedInt();
-  }
-  static List<Brush> parse(BinaryReader br) {
-    int count = br.length~/(3*4); // 3 * int32
-    List<Brush> brushes = new List<Brush>(count);
-    for( int i=0;i<brushes.length;i++) {
-      brushes[i] = new Brush(br);
-    }
-    return brushes;
-  }
-}
-
-class Brushside {
-  int planeNum;
-  int shaderNum;
-  Brushside.init(this.planeNum, this.shaderNum);
-  Brushside( BinaryReader br) {
-    planeNum = br.readOneSignedInt();
-    shaderNum = br.readOneSignedInt();
-  }
-  
-  static List<Brushside> parse(BinaryReader br) {
-    int count = br.length~/(2*4); // 2 * int32
-    List<Brushside> brushSides = new List<Brushside>(count);
-    for( int i=0;i<count;i++) {
-      brushSides[i] = new Brushside(br);
-    }
-    return brushSides;
-  }
-}
-
 class Output {
   bool allSolid = false;
   bool startSolid = false;
@@ -139,35 +10,8 @@ class Output {
   Plane plane;
 }
 
-class PatchPlane {
-  List<double> plane = new List<double>(4);
-  int   signbits;   // signx + (signy<<1) + (signz<<2), used as lookup during collision
-}
-class Facet {
-  int     surfacePlane;
-  int     numBorders;   // 3 or four + 6 axial bevels + 4 or 3 * 4 edge bevels
-  List<int> borderPlanes = new List<int>(4+6+16);
-  List<int> borderInward = new List<int>(4+6+16);
-  List<bool> borderNoAdjust = new List<bool>(4+6+16);
-}
-class PatchCollide {
-  List<Vector> bounds = new List<Vector>(2);
-  int numPlanes;      // surface planes plus edge planes
-  List<PatchPlane> planes;
-  int   numFacets;
-  List<Facet> facets;
-}
-class Patch {
-  int checkcount;       // to avoid repeated testings
-  int surfaceFlags;
-  int contents;
-  PatchCollide pc;
-}
-
 class BSPTree {
-  
   MyBSP myBSP;
-
   BSPTree( this.myBSP) {
     
     //for ( int i = 0 ; i < count ; i++) {      generatePatchCollide( width, height, points );    }
@@ -176,7 +20,6 @@ class BSPTree {
     
     for (Surface surface in myBSP.surfaces) {
       if (surface.surfaceType == Surface.patch) {
-        return;
         int width = surface.patch_size[0];
         int height = surface.patch_size[1];
         int c = width * height;
@@ -184,6 +27,7 @@ class BSPTree {
         List<Vector> points = new List<Vector>();
         for (int j = 0; j < c; c++) {
           Vector v = new Vector();
+          points.add(v);
           //int i = surface.firstVert + indexes[surface.firstIndex + k];
         }
         Patch patch = new Patch();
@@ -341,8 +185,4 @@ class BSPTree {
     
     return;
   }
-  
 }
-
-
-

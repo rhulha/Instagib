@@ -4,10 +4,10 @@ import 'dart:typed_data';
 import 'package:chronosgl/chronosgl.dart';
 
 part 'binary_reader.dart';
-part 'vertex.dart';
-part 'surface.dart';
+part '../structs/vertex.dart';
+part '../structs/surface.dart';
 part 'tessellate.dart';
-part 'shader.dart';
+part '../structs/shader.dart';
 
 abstract class LumpTypes {
   static final int Entities = 0;

@@ -14,6 +14,13 @@ part 'QuakeCamera.dart';
 part 'instagib_shader.dart';
 part 'laser.dart';
 part 'file_cache.dart';
+part 'structs/leaf.dart';
+part 'structs/brush.dart';
+part 'structs/brushside.dart';
+part 'structs/patch.dart';
+part 'structs/plane.dart';
+part 'structs/bsp_node.dart';
+part 'structs/my_bsp.dart';
 
 ChronosGL chronosGL;
 Camera camera;
@@ -66,7 +73,7 @@ void main() {
       myBSP.drawIndexes = parser.getDrawIndexes();
 
       
-      List<Surface> surfacesUntessellated = new List<Surface>.generate(myBSP.surfaces.length, (int idx)=>new Surface.copy(myBSP.surfaces[idx]));
+      myBSP.surfacesUntessellated = new List<Surface>.generate(myBSP.surfaces.length, (int idx)=>new Surface.copy(myBSP.surfaces[idx]));
       
       for (Surface surface in myBSP.surfaces) {
         if (surface.surfaceType == Surface.patch) {
