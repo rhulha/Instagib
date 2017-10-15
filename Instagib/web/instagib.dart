@@ -5,28 +5,20 @@ import 'dart:math' as Math;
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:chronosgl/chronosgl.dart';
-import 'sound.dart';
-import 'loader/BSPParser.dart';
+import 'package:chronosal/chronosal.dart';
+import 'package:bspparser/BSPParser.dart';
 
-part 'structs/helper.dart';
 part 'q3dm17.dart';
 part 'trace.dart';
 part 'QuakeCamera.dart';
 part 'instagib_shader.dart';
 part 'laser.dart';
 part 'file_cache.dart';
-part 'structs/leaf.dart';
-part 'structs/brush.dart';
-part 'structs/brushside.dart';
-part 'structs/patch.dart';
-part 'structs/plane.dart';
-part 'structs/bsp_node.dart';
-part 'structs/clipmap.dart';
 
 ChronosGL chronosGL;
 Camera camera;
 TextureCache textureCache;
-Sound snd = new Sound();
+ChronosAL snd = new ChronosAL();
 
 void main() {
   

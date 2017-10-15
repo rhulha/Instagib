@@ -3,4 +3,8 @@ description: Instagib Q3DM17 running with WebGL
 dependencies:
   chronosgl:
     path: C:\Users\Ray\dart\ChronosGL
+  chronosal:
+    path: C:\Users\Ray\dart\ChronosAL
+  bspparser:
+    path: C:\Users\Ray\dart\BSPParser
   browser: any
