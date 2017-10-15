@@ -27,14 +27,18 @@ ShaderObject getSobelShader() {
   uniform sampler2D colorSampler;
   uniform sampler2D depthSampler;
   
+  uniform float cameraNear;
+  uniform float cameraFar;
+  uniform vec2 size;
+
   float lum_c(vec4 c) {
     return dot(c.xyz, vec3(0.3, 0.59, 0.11));
   }
 
   float linearizeDepth(float z)
   {
-    float n = 1.0; // camera z near
-    float f = 520.0; // camera z far
+    float n = cameraNear; // camera z near
+    float f = cameraFar; // camera z far
     return (2.0 * n) / (f + n - z * (f - n)); 
   }
 
@@ -43,7 +47,7 @@ ShaderObject getSobelShader() {
   }
 
   float sobel_c(sampler2D colorSampler) {
-      vec2 imageIncrement = vec2(1.0/1920.0,1.0/980.0);
+      vec2 imageIncrement = vec2(1.0/size.x,1.0/size.y);
       float t00 = lum_c(texture2D(colorSampler, vTextureCoord + imageIncrement * vec2(-1, -1)));
       float t10 = lum_c(texture2D(colorSampler, vTextureCoord + imageIncrement * vec2( 0, -1)));
       float t20 = lum_c(texture2D(colorSampler, vTextureCoord + imageIncrement * vec2( 1, -1)));
@@ -59,7 +63,7 @@ ShaderObject getSobelShader() {
   } 
 
   float sobel_d(sampler2D colorSampler) {
-      vec2 imageIncrement = vec2(1.0/1920.0,1.0/900.0);
+      vec2 imageIncrement = vec2(1.0/size.x,1.0/size.y);
       float t00 = lum_d(texture2D(colorSampler, vTextureCoord + imageIncrement * vec2(-1, -1)));
       float t10 = lum_d(texture2D(colorSampler, vTextureCoord + imageIncrement * vec2( 0, -1)));
       float t20 = lum_d(texture2D(colorSampler, vTextureCoord + imageIncrement * vec2( 1, -1)));
@@ -110,6 +114,9 @@ ShaderObject getSobelShader() {
   shaderObject.perpectiveMatrixUniform = "uPMatrix";
   shaderObject.textureSamplerUniform = "colorSampler";
   shaderObject.texture2SamplerUniform = "depthSampler";
-  
+  shaderObject.cameraNear = "cameraNear";
+  shaderObject.cameraFar = "cameraFar";
+  shaderObject.size = "size";
+ 
   return shaderObject;
 }

@@ -10,6 +10,8 @@ import 'sound.dart';
 part 'bsp.dart';
 part 'QuakeCamera.dart';
 part 'sobel_shader.dart';
+part 'ssao_shader.dart';
+part 'copy_shader.dart';
 part 'laser.dart';
 
 ChronosGL chronosGL;
@@ -20,7 +22,7 @@ Sound snd = new Sound();
 void main() {
   
   skipDefaultMouseMoveListener = true;
-  chronosGL = new ChronosGL('#webgl-canvas', useFramebuffer:true, fxShader: getSobelShader(), far:2520.0);
+  chronosGL = new ChronosGL('#webgl-canvas', useFramebuffer:true, fxShader: getSSAOShader(), near: 0.1, far:2520.0);
   
   //chronosGL.getRenderingContext().enable( 0x0B44);//RenderingContext.CULL_FACE
   
