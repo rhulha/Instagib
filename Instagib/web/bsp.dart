@@ -263,12 +263,13 @@ class BSPTree {
   
   void addFacetBevels(Facet facet) {
     int i, j, k, l;
-    int axis, dir, order, flipped;
+    int axis, dir, order;
+    Wrapper<bool> flipped = new Wrapper<bool>(false);
     List<double> plane=new List<double>(4);
     List<double> newplane=new List<double>(4);
     double d;
     Winding w, w2;
-    Vector mins, maxs, vec, vec2;
+    Vector mins, maxs, vec = new Vector(), vec2;
 
     VectorCopy( planes[ facet.surfacePlane ].plane, plane );
 
@@ -307,24 +308,21 @@ class BSPTree {
           plane[3] = -mins[axis];
         }
         //if it's the surface plane
-        var res = planeEqual(planes[facet.surfacePlane], plane);
-        flipped = res.flipped;
-        if (res.equal) {
+        if (planeEqual(planes[facet.surfacePlane], plane, flipped)) {
           continue;
         }
         // see if the plane is allready present
         for ( i = 0 ; i < facet.numBorders ; i++ ) {
-          var res = planeEqual(planes[facet.borderPlanes[i]], plane);
-          flipped = res.flipped;
-          if (res.equal)
+          if (planeEqual(planes[facet.borderPlanes[i]], plane, flipped))
             break;
         }
 
         if ( i == facet.numBorders ) {
-          if (facet.numBorders > 4 + 6 + 16) Com_Printf("ERROR: too many bevels\n");
-          facet.borderPlanes[facet.numBorders] = CM_FindPlane2(plane, &flipped);
-          facet.borderNoAdjust[facet.numBorders] = 0;
-          facet.borderInward[facet.numBorders] = flipped;
+          if (facet.numBorders > 4 + 6 + 16)
+            print("ERROR: too many bevels\n");
+          facet.borderPlanes[facet.numBorders] = findPlane2(plane, flipped);
+          facet.borderNoAdjust[facet.numBorders] = false;
+          facet.borderInward[facet.numBorders] = flipped.value;
           facet.numBorders++;
         }
       }
@@ -336,11 +334,11 @@ class BSPTree {
     for ( j = 0 ; j < w.numpoints ; j++ )
     {
       k = (j+1)%w.numpoints;
-      VectorSubtract (w.p[j], w.p[k], vec);
+      vec.set(w.p[j]).subtract(w.p[k]);
       //if it's a degenerate edge
-      if (VectorNormalize (vec) < 0.5)
+      if ( VectorNormalize(vec.array) < 0.5)
         continue;
-      CM_SnapVector(vec);
+      snapVector(vec);
       for ( k = 0; k < 3 ; k++ )
         if ( vec[k] == -1 || vec[k] == 1 )
           break;  // axial
@@ -353,18 +351,18 @@ class BSPTree {
         for ( dir = -1 ; dir <= 1 ; dir += 2 )
         {
           // construct a plane
-          VectorClear (vec2);
-          vec2[axis] = dir;
-          CrossProduct (vec, vec2, plane);
+          vec2.scale(0);
+          vec2[axis] = dir.toDouble();
+          CrossProduct (vec.array, vec2.array, plane);
           if (VectorNormalize (plane) < 0.5)
             continue;
-          plane[3] = DotProduct (w.p[j], plane);
+          plane[3] = DotProduct (w.p[j].array, plane);
 
           // if all the points of the facet winding are
           // behind this plane, it is a proper edge bevel
           for ( l = 0 ; l < w.numpoints ; l++ )
           {
-            d = DotProduct (w.p[l], plane) - plane[3];
+            d = DotProduct (w.p[l].array, plane) - plane[3];
             if (d > 0.1)
               break;  // point in front
           }
@@ -372,8 +370,7 @@ class BSPTree {
             continue;
 
           //if it's the surface plane
-          var res = planeEqual(planes[facet.surfacePlane], plane);
-          if (res.equal) {
+          if (planeEqual(planes[facet.surfacePlane], plane, flipped)) {
             continue;
           }
           // see if the plane is allready present
@@ -384,27 +381,30 @@ class BSPTree {
           }
 
           if ( i == facet.numBorders ) {
-            if (facet.numBorders > 4 + 6 + 16) Com_Printf("ERROR: too many bevels\n");
-            facet.borderPlanes[facet.numBorders] = CM_FindPlane2(plane, &flipped);
+            if (facet.numBorders > 4 + 6 + 16)
+              print("ERROR: too many bevels\n");
+            facet.borderPlanes[facet.numBorders] = findPlane2(plane, flipped);
 
             for ( k = 0 ; k < facet.numBorders ; k++ ) {
               if (facet.borderPlanes[facet.numBorders] ==
-                facet.borderPlanes[k]) Com_Printf("WARNING: bevel plane already used\n");
+                facet.borderPlanes[k]) print("WARNING: bevel plane already used\n");
             }
 
-            facet.borderNoAdjust[facet.numBorders] = 0;
-            facet.borderInward[facet.numBorders] = flipped;
+            facet.borderNoAdjust[facet.numBorders] = false;
+            facet.borderInward[facet.numBorders] = flipped.value;
             //
             w2 = CopyWinding(w);
-            Vector4Copy(planes[facet.borderPlanes[facet.numBorders]].plane, newplane);
+            VectorCopy(planes[facet.borderPlanes[facet.numBorders]].plane, newplane);
             if (!facet.borderInward[facet.numBorders])
             {
-              VectorNegate(newplane, newplane);
+              newplane[0] = -newplane[0];
+              newplane[1] = -newplane[1];
+              newplane[2] = -newplane[2];
               newplane[3] = -newplane[3];
             } //end if
-            ChopWindingInPlace( &w2, newplane, newplane[3], 0.1f );
-            if (!w2) {
-              Com_DPrintf("WARNING: CM_AddFacetBevels... invalid bevel\n");
+            ChopWindingInPlace( w2, newplane, newplane[3], 0.1 );
+            if (w2==null) {
+              print("WARNING: CM_AddFacetBevels... invalid bevel\n");
               continue;
             }
             else {
@@ -422,38 +422,89 @@ class BSPTree {
 
     //add opposite plane
     facet.borderPlanes[facet.numBorders] = facet.surfacePlane;
-    facet.borderNoAdjust[facet.numBorders] = 0;
-    facet.borderInward[facet.numBorders] = qtrue;
+    facet.borderNoAdjust[facet.numBorders] = false;
+    facet.borderInward[facet.numBorders] = true;
     facet.numBorders++;
   }
   
-  dynamic planeEqual(PatchPlane p, List<double> plane) {
-    List<double> invplane = new List<double>(4);
-
-    if (
-       (p.plane[0] - plane[0]).abs() < NORMAL_EPSILON
-    && (p.plane[1] - plane[1]).abs() < NORMAL_EPSILON
-    && (p.plane[2] - plane[2]).abs() < NORMAL_EPSILON
-    && (p.plane[3] - plane[3]).abs() < DIST_EPSILON )
-    {
-      return {'equal':true,'flipped': false};
+  Winding CopyWinding(Winding w) {
+    Winding r = new Winding();
+    r.numpoints = w.numpoints;
+    r.p = new List<Vector>.generate(w.numpoints, (int idx)=>new Vector.fromVector(w.p[idx]));
+    return r;
+  }
+  
+  double VectorNormalize(List<double> v) {
+    double length = Math.sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
+    if ( length!=0 ) {
+      double ilength = 1/length;
+      v[0] *= ilength;
+      v[1] *= ilength;
+      v[2] *= ilength;
+    }
+    return length;
+  }
+  
+  int findPlane2(List<double> plane, Wrapper<bool> flipped) {
+    // see if the points are close enough to an existing plane
+    for( int i=0; i<numPlanes; i++ ) {
+      if (planeEqual(planes[i], plane, flipped)) return i;
     }
 
+    // add a new plane
+    assert( numPlanes < 2048 );  //  MAX_PATCH_PLANES //   Com_Error( ERR_DROP, "MAX_PATCH_PLANES" );
+
+    VectorCopy( plane, planes[numPlanes].plane );
+    planes[numPlanes].signbits = signbitsForNormal( plane );
+
+    numPlanes++;
+
+    flipped.value = false;
+
+    return numPlanes-1;
+  }
+  
+  
+  void snapVector(Vector normal) {
+    for (int i=0 ; i<3 ; i++)
+    {
+      if ( (normal[i] - 1).abs() < NORMAL_EPSILON )
+      {
+        normal.scale(0);
+        normal[i] = 1.0;
+        break;
+      }
+      if ( (normal[i] - -1).abs() < NORMAL_EPSILON )
+      {
+        normal.scale(0);
+        normal[i] = -1.0;
+        break;
+      }
+    }
+  }
+  
+  bool planeEqual(PatchPlane p, List<double> plane, Wrapper<bool> flipped) {
+    List<double> invplane = new List<double>(4);
+    if( (p.plane[0] - plane[0]).abs() < NORMAL_EPSILON
+     && (p.plane[1] - plane[1]).abs() < NORMAL_EPSILON
+     && (p.plane[2] - plane[2]).abs() < NORMAL_EPSILON
+     && (p.plane[3] - plane[3]).abs() < DIST_EPSILON ) {
+      flipped.value = false;
+      return true;
+    }
     invplane[0] = -plane[0];
     invplane[1] = -plane[1];
     invplane[2] = -plane[2];
     invplane[3] = -plane[3];
 
-    if (
-       (p.plane[0] - invplane[0]).abs() < NORMAL_EPSILON
-    && (p.plane[1] - invplane[1]).abs() < NORMAL_EPSILON
-    && (p.plane[2] - invplane[2]).abs() < NORMAL_EPSILON
-    && (p.plane[3] - invplane[3]).abs() < DIST_EPSILON )
-    {
-      return {'equal':true,'flipped': true};
+    if( (p.plane[0] - invplane[0]).abs() < NORMAL_EPSILON
+     && (p.plane[1] - invplane[1]).abs() < NORMAL_EPSILON
+     && (p.plane[2] - invplane[2]).abs() < NORMAL_EPSILON
+     && (p.plane[3] - invplane[3]).abs() < DIST_EPSILON ) {
+      flipped.value = true;
+      return true;
     }
-
-    return {'equal':false,'flipped': false};
+    return false;
   }
   
   
@@ -813,6 +864,11 @@ class BSPTree {
     return -1;
   }
   
+  void CrossProduct( List<double> v1, List<double> v2, List<double> cross) {
+    cross[0] = v1[1]*v2[2] - v1[2]*v2[1];
+    cross[1] = v1[2]*v2[0] - v1[0]*v2[2];
+    cross[2] = v1[0]*v2[1] - v1[1]*v2[0];
+  }
   double DotProduct( List<double> a, List<double> b) {
     return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
   }

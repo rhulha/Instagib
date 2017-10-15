@@ -1,5 +1,11 @@
 part of instagib;
 
+
+class Wrapper<T> {
+  T value;
+  Wrapper(this.value);
+}
+
 class Grid {
   int width;
   int height;
