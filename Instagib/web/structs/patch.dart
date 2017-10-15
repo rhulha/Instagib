@@ -10,7 +10,11 @@ class Grid {
 
 class Winding {
   int numpoints;
-  List<Vector> p = new List<Vector>.generate(4, (idx)=>new Vector());   // variable sized
+  List<Vector> p;
+
+  Winding([int maxpts=4]) {
+    p = new List<Vector>.generate(maxpts, (idx)=>new Vector());
+  }
 }
 
 class PatchPlane {

@@ -14,6 +14,9 @@ const int SIDE_CROSS = 3;
 
 const double MAX_MAP_BOUNDS = 65535.0;
 
+const double NORMAL_EPSILON = 0.0001;
+const double DIST_EPSILON = 0.02;
+
 class Output {
   bool allSolid = false;
   bool startSolid = false;
@@ -261,25 +264,29 @@ class BSPTree {
   void addFacetBevels(Facet facet) {
     int i, j, k, l;
     int axis, dir, order, flipped;
-    float plane[4], d, newplane[4];
-    winding_t *w, *w2;
-    vec3_t mins, maxs, vec, vec2;
+    List<double> plane=new List<double>(4);
+    List<double> newplane=new List<double>(4);
+    double d;
+    Winding w, w2;
+    Vector mins, maxs, vec, vec2;
 
-    Vector4Copy( planes[ facet->surfacePlane ].plane, plane );
+    VectorCopy( planes[ facet.surfacePlane ].plane, plane );
 
     w = BaseWindingForPlane( plane,  plane[3] );
-    for ( j = 0 ; j < facet->numBorders && w ; j++ ) {
-      if (facet->borderPlanes[j] == facet->surfacePlane) continue;
-      Vector4Copy( planes[ facet->borderPlanes[j] ].plane, plane );
+    for ( j=0; j<facet.numBorders; j++ ) {
+      if (facet.borderPlanes[j] == facet.surfacePlane) continue;
+      VectorCopy( planes[ facet.borderPlanes[j] ].plane, plane );
 
-      if ( !facet->borderInward[j] ) {
-        VectorSubtract( vec3_origin, plane, plane );
+      if ( !facet.borderInward[j] ) {
+        plane[0] = -plane[0];
+        plane[1] = -plane[1];
+        plane[2] = -plane[2];
         plane[3] = -plane[3];
       }
 
-      ChopWindingInPlace( &w, plane, plane[3], 0.1f );
+      w = ChopWindingInPlace( w, plane, plane[3], 0.1 );
     }
-    if ( !w ) {
+    if ( w==null ) {
       return;
     }
 
@@ -291,8 +298,8 @@ class BSPTree {
     {
       for ( dir = -1 ; dir <= 1 ; dir += 2, order++ )
       {
-        VectorClear(plane);
-        plane[axis] = dir;
+        plane.fillRange(0, 3, 0.0);
+        plane[axis] = dir.toDouble();
         if (dir == 1) {
           plane[3] = maxs[axis];
         }
@@ -300,21 +307,25 @@ class BSPTree {
           plane[3] = -mins[axis];
         }
         //if it's the surface plane
-        if (CM_PlaneEqual(&planes[facet->surfacePlane], plane, &flipped)) {
+        var res = planeEqual(planes[facet.surfacePlane], plane);
+        flipped = res.flipped;
+        if (res.equal) {
           continue;
         }
         // see if the plane is allready present
-        for ( i = 0 ; i < facet->numBorders ; i++ ) {
-          if (CM_PlaneEqual(&planes[facet->borderPlanes[i]], plane, &flipped))
+        for ( i = 0 ; i < facet.numBorders ; i++ ) {
+          var res = planeEqual(planes[facet.borderPlanes[i]], plane);
+          flipped = res.flipped;
+          if (res.equal)
             break;
         }
 
-        if ( i == facet->numBorders ) {
-          if (facet->numBorders > 4 + 6 + 16) Com_Printf("ERROR: too many bevels\n");
-          facet->borderPlanes[facet->numBorders] = CM_FindPlane2(plane, &flipped);
-          facet->borderNoAdjust[facet->numBorders] = 0;
-          facet->borderInward[facet->numBorders] = flipped;
-          facet->numBorders++;
+        if ( i == facet.numBorders ) {
+          if (facet.numBorders > 4 + 6 + 16) Com_Printf("ERROR: too many bevels\n");
+          facet.borderPlanes[facet.numBorders] = CM_FindPlane2(plane, &flipped);
+          facet.borderNoAdjust[facet.numBorders] = 0;
+          facet.borderInward[facet.numBorders] = flipped;
+          facet.numBorders++;
         }
       }
     }
@@ -322,10 +333,10 @@ class BSPTree {
     // add the edge bevels
     //
     // test the non-axial plane edges
-    for ( j = 0 ; j < w->numpoints ; j++ )
+    for ( j = 0 ; j < w.numpoints ; j++ )
     {
-      k = (j+1)%w->numpoints;
-      VectorSubtract (w->p[j], w->p[k], vec);
+      k = (j+1)%w.numpoints;
+      VectorSubtract (w.p[j], w.p[k], vec);
       //if it's a degenerate edge
       if (VectorNormalize (vec) < 0.5)
         continue;
@@ -347,45 +358,46 @@ class BSPTree {
           CrossProduct (vec, vec2, plane);
           if (VectorNormalize (plane) < 0.5)
             continue;
-          plane[3] = DotProduct (w->p[j], plane);
+          plane[3] = DotProduct (w.p[j], plane);
 
           // if all the points of the facet winding are
           // behind this plane, it is a proper edge bevel
-          for ( l = 0 ; l < w->numpoints ; l++ )
+          for ( l = 0 ; l < w.numpoints ; l++ )
           {
-            d = DotProduct (w->p[l], plane) - plane[3];
+            d = DotProduct (w.p[l], plane) - plane[3];
             if (d > 0.1)
               break;  // point in front
           }
-          if ( l < w->numpoints )
+          if ( l < w.numpoints )
             continue;
 
           //if it's the surface plane
-          if (CM_PlaneEqual(&planes[facet->surfacePlane], plane, &flipped)) {
+          var res = planeEqual(planes[facet.surfacePlane], plane);
+          if (res.equal) {
             continue;
           }
           // see if the plane is allready present
-          for ( i = 0 ; i < facet->numBorders ; i++ ) {
-            if (CM_PlaneEqual(&planes[facet->borderPlanes[i]], plane, &flipped)) {
+          for ( i = 0 ; i < facet.numBorders ; i++ ) {
+            if (planeEqual(planes[facet.borderPlanes[i]], plane, flipped)) {
                 break;
             }
           }
 
-          if ( i == facet->numBorders ) {
-            if (facet->numBorders > 4 + 6 + 16) Com_Printf("ERROR: too many bevels\n");
-            facet->borderPlanes[facet->numBorders] = CM_FindPlane2(plane, &flipped);
+          if ( i == facet.numBorders ) {
+            if (facet.numBorders > 4 + 6 + 16) Com_Printf("ERROR: too many bevels\n");
+            facet.borderPlanes[facet.numBorders] = CM_FindPlane2(plane, &flipped);
 
-            for ( k = 0 ; k < facet->numBorders ; k++ ) {
-              if (facet->borderPlanes[facet->numBorders] ==
-                facet->borderPlanes[k]) Com_Printf("WARNING: bevel plane already used\n");
+            for ( k = 0 ; k < facet.numBorders ; k++ ) {
+              if (facet.borderPlanes[facet.numBorders] ==
+                facet.borderPlanes[k]) Com_Printf("WARNING: bevel plane already used\n");
             }
 
-            facet->borderNoAdjust[facet->numBorders] = 0;
-            facet->borderInward[facet->numBorders] = flipped;
+            facet.borderNoAdjust[facet.numBorders] = 0;
+            facet.borderInward[facet.numBorders] = flipped;
             //
             w2 = CopyWinding(w);
-            Vector4Copy(planes[facet->borderPlanes[facet->numBorders]].plane, newplane);
-            if (!facet->borderInward[facet->numBorders])
+            Vector4Copy(planes[facet.borderPlanes[facet.numBorders]].plane, newplane);
+            if (!facet.borderInward[facet.numBorders])
             {
               VectorNegate(newplane, newplane);
               newplane[3] = -newplane[3];
@@ -396,26 +408,54 @@ class BSPTree {
               continue;
             }
             else {
-              FreeWinding(w2);
+              //FreeWinding(w2);
             }
             //
-            facet->numBorders++;
+            facet.numBorders++;
             //already got a bevel
 //          break;
           }
         }
       }
     }
-    FreeWinding( w );
+    //FreeWinding( w );
 
-  #ifndef BSPC
     //add opposite plane
-    facet->borderPlanes[facet->numBorders] = facet->surfacePlane;
-    facet->borderNoAdjust[facet->numBorders] = 0;
-    facet->borderInward[facet->numBorders] = qtrue;
-    facet->numBorders++;
-  #endif //BSPC
+    facet.borderPlanes[facet.numBorders] = facet.surfacePlane;
+    facet.borderNoAdjust[facet.numBorders] = 0;
+    facet.borderInward[facet.numBorders] = qtrue;
+    facet.numBorders++;
   }
+  
+  dynamic planeEqual(PatchPlane p, List<double> plane) {
+    List<double> invplane = new List<double>(4);
+
+    if (
+       (p.plane[0] - plane[0]).abs() < NORMAL_EPSILON
+    && (p.plane[1] - plane[1]).abs() < NORMAL_EPSILON
+    && (p.plane[2] - plane[2]).abs() < NORMAL_EPSILON
+    && (p.plane[3] - plane[3]).abs() < DIST_EPSILON )
+    {
+      return {'equal':true,'flipped': false};
+    }
+
+    invplane[0] = -plane[0];
+    invplane[1] = -plane[1];
+    invplane[2] = -plane[2];
+    invplane[3] = -plane[3];
+
+    if (
+       (p.plane[0] - invplane[0]).abs() < NORMAL_EPSILON
+    && (p.plane[1] - invplane[1]).abs() < NORMAL_EPSILON
+    && (p.plane[2] - invplane[2]).abs() < NORMAL_EPSILON
+    && (p.plane[3] - invplane[3]).abs() < DIST_EPSILON )
+    {
+      return {'equal':true,'flipped': true};
+    }
+
+    return {'equal':false,'flipped': false};
+  }
+  
   
   bool validateFacet(Facet facet) {
     List<double> plane=new List<double>(4);
@@ -429,25 +469,27 @@ class BSPTree {
 
     VectorCopy( planes[ facet.surfacePlane ].plane, plane );
     w = BaseWindingForPlane( plane,  plane[3] );
-    for ( j = 0 ; j < facet.numBorders && w ; j++ ) {
+    for ( j = 0 ; j < facet.numBorders; j++ ) {
       if ( facet.borderPlanes[j] == -1 ) {
         return false;
       }
       VectorCopy( planes[ facet.borderPlanes[j] ].plane, plane );
       if ( !facet.borderInward[j] ) {
-        VectorSubtract( vec3_origin, plane, plane );
+        plane[0] = -plane[0];
+        plane[1] = -plane[1];
+        plane[2] = -plane[2];
         plane[3] = -plane[3];
       }
-      ChopWindingInPlace( &w, plane, plane[3], 0.1 );
+      w = ChopWindingInPlace( w, plane, plane[3], 0.1 );
     }
 
-    if ( !w ) {
+    if ( w==null ) {
       return false;    // winding was completely chopped away
     }
 
     // see if the facet is unreasonably large
     WindingBounds( w, bounds[0], bounds[1] );
-    FreeWinding( w );
+    //FreeWinding( w );
     
     for ( j = 0 ; j < 3 ; j++ ) {
       if ( bounds[1][j] - bounds[0][j] > MAX_MAP_BOUNDS ) {  
@@ -462,6 +504,116 @@ class BSPTree {
     }
     return true;   // winding is fine
   }
+  
+  void WindingBounds(Winding w, Vector mins, Vector maxs) {
+
+    mins[0] = mins[1] = mins[2] = MAX_MAP_BOUNDS;
+    maxs[0] = maxs[1] = maxs[2] = -MAX_MAP_BOUNDS;
+
+    for (int i=0; i<w.numpoints; i++)
+    {
+      for (int j=0; j<3; j++)
+      {
+        double v = w.p[i][j];
+        if (v < mins[j])
+          mins[j] = v;
+        if (v > maxs[j])
+          maxs[j] = v;
+      }
+    }
+  }
+  
+  Winding ChopWindingInPlace(Winding inout, List<double> normal, double dist, double epsilon) {
+    Winding in_;
+    List<double> dists = new List<double>(64+4); // MAX_POINTS_ON_WINDING
+    List<int> sides = new List<int>(64+4); // MAX_POINTS_ON_WINDING
+    List<int> counts = new List<int>(3);
+    double dot;
+    int i, j;
+    Vector p1, p2;
+    Vector  mid;
+    Winding f;
+    int maxpts;
+
+    in_ = inout;
+    counts[0] = counts[1] = counts[2] = 0;
+
+// determine sides for each point
+    for (i=0 ; i<in_.numpoints; i++)
+    {
+      dot = DotProduct (in_.p[i].array, normal);
+      dot -= dist;
+      dists[i] = dot;
+      if (dot > epsilon)
+        sides[i] = SIDE_FRONT;
+      else if (dot < -epsilon)
+        sides[i] = SIDE_BACK;
+      else
+      {
+        sides[i] = SIDE_ON;
+      }
+      counts[sides[i]]++;
+    }
+    sides[i] = sides[0];
+    dists[i] = dists[0];
+    
+    if (counts[0]==0)
+    {
+      return null;
+    }
+    if (counts[1]==0)
+      return in_;   // inout stays the same
+
+    maxpts = in_.numpoints+4; // cant use counts[0]+2 because of fp grouping errors
+
+    f = new Winding(maxpts);
+      
+    for (i=0 ; i<in_.numpoints ; i++)
+    {
+      p1 = in_.p[i];
+      
+      if (sides[i] == SIDE_ON)
+      {
+        f.p[f.numpoints].set(p1);
+        f.numpoints++;
+        continue;
+      }
+    
+      if (sides[i] == SIDE_FRONT)
+      {
+        f.p[f.numpoints].set(p1);
+        f.numpoints++;
+      }
+
+      if (sides[i+1] == SIDE_ON || sides[i+1] == sides[i])
+        continue;
+        
+    // generate a split point
+      p2 = in_.p[(i+1)%in_.numpoints];
+      
+      dot = dists[i] / (dists[i]-dists[i+1]);
+      for (j=0 ; j<3 ; j++)
+      { // avoid round off error when possible
+        if (normal[j] == 1)
+          mid[j] = dist;
+        else if (normal[j] == -1)
+          mid[j] = -dist;
+        else
+          mid[j] = p1[j] + dot*(p2[j]-p1[j]);
+      }
+        
+      f.p[f.numpoints].set(mid);
+      f.numpoints++;
+    }
+    
+    assert(f.numpoints <= maxpts);//      Com_Error (ERR_DROP, "ClipWinding: points exceeded estimate");
+    assert(f.numpoints <= 64); // MAX_POINTS_ON_WINDING  //      Com_Error (ERR_DROP, "ClipWinding: MAX_POINTS_ON_WINDING");
+
+    //FreeWinding (in_);
+    inout = f;
+    return f; // TODO: test this...
+  }
+  
   
   Winding BaseWindingForPlane(List<double> normal, double dist) {
     int i, x;
