@@ -23,4 +23,9 @@ class Patch {
   int surfaceFlags;
   int contents;
   PatchCollide pc;
+
+  Patch(Shader shader){
+    this.contents = shader.contentFlags;
+    this.surfaceFlags = shader.surfaceFlags;
+  }
 }

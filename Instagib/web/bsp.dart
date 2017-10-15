@@ -14,25 +14,16 @@ class BSPTree {
   MyBSP myBSP;
   BSPTree( this.myBSP) {
     
-    //for ( int i = 0 ; i < count ; i++) {      generatePatchCollide( width, height, points );    }
-    
     List<Patch> patches = new List<Patch>();
     
-    for (Surface surface in myBSP.surfaces) {
+    for (Surface surface in myBSP.surfacesUntessellated) {
       if (surface.surfaceType == Surface.patch) {
         int width = surface.patch_size[0];
         int height = surface.patch_size[1];
         int c = width * height;
-        assert ( c <= 1024 );// {          print( "ParseMesh: MAX_PATCH_VERTS" );        }
-        List<Vector> points = new List<Vector>();
-        for (int j = 0; j < c; c++) {
-          Vector v = new Vector();
-          points.add(v);
-          //int i = surface.firstVert + indexes[surface.firstIndex + k];
-        }
-        Patch patch = new Patch();
-        patch.contents = myBSP.shaders[surface.shaderNum].contentFlags;
-        patch.surfaceFlags = myBSP.shaders[surface.shaderNum].surfaceFlags;
+        assert ( c <= 1024 );
+        List<Vector> points = new List<Vector>.generate(c, (idx)=>new Vector.fromList(myBSP.drawVerts[surface.firstVert+idx].xyz));
+        Patch patch = new Patch(myBSP.shaders[surface.shaderNum]);
         patch.pc = generatePatchCollide( width, height, points );
         patches.add(patch);
       }
