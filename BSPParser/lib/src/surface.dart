@@ -22,6 +22,8 @@ class Surface {
   List<double> lightmapOrigin;//  World space origin of lightmap.
   List<double> lightmapVecs;//  World space lightmap s and t unit vectors. (and maybe normal)
   List<int> patch_size;//  Patch dimensions.
+  
+  Patch patchRef;
 
   Surface(BinaryReader br) {
     this.shaderNum = br.readOneInt();

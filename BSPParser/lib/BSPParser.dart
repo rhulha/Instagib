@@ -2,7 +2,7 @@ library bspparser;
 
 import 'dart:typed_data';
 import 'dart:math' as Math;
-import 'package:chronosgl/chronosgl.dart';
+import 'package:chronosgl/chronosmath.dart';
 
 part 'src/binary_reader.dart';
 part 'src/vertex.dart';

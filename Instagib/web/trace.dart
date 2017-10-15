@@ -94,7 +94,7 @@ class BSPTree {
       List<Vector> points = new List<Vector>.generate(c, (idx) => new Vector.fromList(cm.drawVerts[surface.firstVert + idx].xyz));
       Patch patch = new Patch(cm.shaders[surface.shaderNum]);
       patch.pc = generatePatchCollide(width, height, points);
-      patches.add(patch);
+      surface.patchRef=patch;
     }
   }
 
@@ -178,8 +178,10 @@ class BSPTree {
     }
 
     
-    for (int k = leaf.numLeafSurfaces; k < leaf.numLeafSurfaces; k++) { // TODO: reactivate by setting k=0 !!!!!!!!!!!!!!!!
-      Patch patch = patches[cm.leafSurfaces[leaf.firstLeafSurface + k]];
+    for (int k = 0; k < leaf.numLeafSurfaces; k++) { // TODO: reactivate by setting k=0 !!!!!!!!!!!!!!!!
+      //print(leaf.firstLeafSurface);
+      //print(cm.leafSurfaces.length);
+      Patch patch = cm.surfacesUntessellated[cm.leafSurfaces[leaf.firstLeafSurface + k]].patchRef;
       if (patch == null) {
         continue;
       }
@@ -198,7 +200,7 @@ class BSPTree {
   }
 
   void traceThroughPatch(TraceWork tw, Patch patch) {
-    //c_patch_traces++;
+    //c_patch_traces++; // TODO: reactivate?
 
     double oldFrac = tw.trace.fraction;
 

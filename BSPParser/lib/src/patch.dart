@@ -22,8 +22,6 @@ List<PatchPlane> planes = new List<PatchPlane>.generate(2048, (idx)=>new PatchPl
 int numFacets;
 List<Facet> facets = new List<Facet>.generate(2048, (idx)=>new Facet());
 
-List<Patch> patches = new List<Patch>();
-
 class Grid {
   int width;
   int height;
@@ -46,11 +44,18 @@ class PatchPlane {
   int   signbits;   // signx + (signy<<1) + (signz<<2), used as lookup during collision
 }
 class Facet {
-  int     surfacePlane;
+  int     _surfacePlane;
   int     numBorders;   // 3 or four + 6 axial bevels + 4 or 3 * 4 edge bevels
   List<int> borderPlanes = new List<int>(4+6+16);
   List<bool> borderInward = new List<bool>(4+6+16);
   List<bool> borderNoAdjust = new List<bool>(4+6+16);
+  
+  void set surfacePlane(int surfacePlane) {
+    if( surfacePlane<0)
+      throw new Exception(-1);
+    _surfacePlane = surfacePlane;
+  }
+  int get surfacePlane => _surfacePlane;
 }
 class PatchCollide {
   List<Vector> bounds = new List<Vector>.generate(2, (idx)=>new Vector());
@@ -833,6 +838,7 @@ int findPlane(Vector p1, Vector p2, Vector p3) {
   double d;
 
   if ( !planeFromPoints( plane, p1, p2, p3 ) ) {
+    print("planeFromPoints $p1, $p2, $p3");
     return -1;
   }
 
