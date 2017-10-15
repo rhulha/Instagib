@@ -98,7 +98,7 @@ void addLaser( Spatial spatial, num moveLeft, num moveUp ) {
     laserBeam.transform.identity();
   } else {
     //console.log("laser cache miss");
-    Mesh laserMesh = new Mesh( createCylinder( 0.1, LASER_LENGTH*2.0, 20, textureCache.get("red")));
+    Mesh laserMesh = new Mesh( createCylinderInternal( 0.1, LASER_LENGTH*2.0, 20), texture: textureCache.get("red"));
     laserMesh.transform.rotate(0.5*Math.PI, laserMesh.getRight()); // point the cylinder forward
     laserBeam = new LaserBeam( laserMesh);
     laserBeam.type = "laser";

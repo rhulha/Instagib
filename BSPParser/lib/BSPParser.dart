@@ -143,7 +143,35 @@ class BSPParser {
     cm.leafSurfaces = getLump(LumpTypes.LeafSurfaces).readAllSignedInts();
     cm.leafBrushes = getLump(LumpTypes.LeafBrushes).readAllSignedInts();
     cm.brushes = Brush.parse(getLump(LumpTypes.Brushes));
+
+    for( Brush b in cm.brushes) {
+      b.contents = cm.shaders[b.shaderNum].contentFlags;
+    }
+
     cm.brushSides = Brushside.parse(getLump(LumpTypes.BrushSides));
+
+    for( Brushside bs in cm.brushSides) {
+      bs.surfaceFlags = cm.shaders[bs.shaderNum].surfaceFlags;
+    }
+
+    for( Brush b in cm.brushes) {
+      b.bounds[0][0] = - cm.planes[cm.brushSides[b.firstSide+0].planeNum].dist;
+      b.bounds[1][0] =   cm.planes[cm.brushSides[b.firstSide+1].planeNum].dist;
+
+      b.bounds[0][1] = - cm.planes[cm.brushSides[b.firstSide+2].planeNum].dist;
+      b.bounds[1][1] =   cm.planes[cm.brushSides[b.firstSide+3].planeNum].dist;
+
+      b.bounds[0][2] = - cm.planes[cm.brushSides[b.firstSide+4].planeNum].dist;
+      b.bounds[1][2] =   cm.planes[cm.brushSides[b.firstSide+5].planeNum].dist;
+    }
+
+    /*
+    for( Brush b in cm.brushes) {
+      print(b.bounds[0]);
+      print(b.bounds[1]);
+    }
+    */
+
 
     cm.models = getModels();
 

@@ -56,15 +56,12 @@ void changeColors(List<Surface> surfaces, List<int> indexes, List<Shader> shader
         int i = face.firstVert + indexes[face.firstIndex + k];
         vertexes[i].color[2] = 1.0;
       }
-    }
-    if (red.contains(shaders[face.shaderNum].shader)) {
+    } else if (red.contains(shaders[face.shaderNum].shader)) {
       for (int k = 0; k < face.numIndexes; ++k) {
         int i = face.firstVert + indexes[face.firstIndex + k];
         vertexes[i].color[0] = 1.0;
       }
-    }
-
-    if (shaders[face.shaderNum].shader == "textures/base_floor/diamond2c") { // special middle jump pad handling
+    } else if (shaders[face.shaderNum].shader == "textures/base_floor/diamond2c") { // special middle jump pad handling
       for (int k = 0; k < face.numIndexes; ++k) {
         int i = face.firstVert + indexes[face.firstIndex + k];
         double z = vertexes[i].xyz[2];
@@ -73,7 +70,13 @@ void changeColors(List<Surface> surfaces, List<int> indexes, List<Shader> shader
           vertexes[i].color[1] = 0.25;
           vertexes[i].color[2] = 1.0;
         }
-
+      }
+    } else {
+      for (int k = 0; k < face.numIndexes; ++k) {
+        int i = face.firstVert + indexes[face.firstIndex + k];
+        vertexes[i].color[0] *= 0.5;
+        vertexes[i].color[1] *= 0.5;
+        vertexes[i].color[2] *= 0.5;
       }
     }
   }

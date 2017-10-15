@@ -48,12 +48,52 @@ class QuakeCamera extends Animatable
   
   QuakeCamera( this.camera) {
 
+    void fullscreenWorkaround(HTML.Element element) {
+      var elem = new JS.JsObject.fromBrowserObject(element);
+
+      if (elem.hasProperty("requestFullscreen")) {
+        elem.callMethod("requestFullscreen");
+      }
+      else {
+        List<String> vendors = ['moz', 'webkit', 'ms', 'o'];
+        for (String vendor in vendors) {
+          String vendorFullscreen = "${vendor}RequestFullscreen";
+          if (vendor == 'moz') {
+            vendorFullscreen = "${vendor}RequestFullScreen";
+          }
+          if (elem.hasProperty(vendorFullscreen)) {
+            elem.callMethod(vendorFullscreen);
+            return;
+          }
+        }
+      }
+    }
+    void pointerLockWorkaround(HTML.Element element) {
+      var elem = new JS.JsObject.fromBrowserObject(element);
+
+      if (elem.hasProperty("requestPointerLock")) {
+        elem.callMethod("requestPointerLock");
+      }
+      else {
+        List<String> vendors = ['moz', 'webkit', 'ms', 'o'];
+        for (String vendor in vendors) {
+          String vendorFullscreen = "${vendor}RequestPointerLock";
+          if (elem.hasProperty(vendorFullscreen)) {
+            elem.callMethod(vendorFullscreen);
+            return;
+          }
+        }
+      }
+    }
+
     HTML.HtmlElement canvas = HTML.document.body;// querySelector('#webgl-canvas');
     canvas.onMouseDown.listen( (HTML.MouseEvent e) {
       e.preventDefault();
       if( HTML.document.pointerLockElement != canvas) {
-        canvas.requestPointerLock();
-        canvas.requestFullscreen();
+        //canvas.requestPointerLock();
+        pointerLockWorkaround(canvas);
+        //canvas.requestFullscreen();
+        fullscreenWorkaround(canvas);
       } else {
         snd.playSound('rail');
         addLaser(camera, 0, -0.2);
@@ -71,7 +111,11 @@ class QuakeCamera extends Animatable
   void setBSPTree( BSPTree bsp) {
     this.bsp = bsp;
   }
-  
+
+  Vector trace_mins=new Vector();
+  Vector trace_maxs=new Vector();
+  //Vector range = new Vector( 40, 40, 52 );
+
   void animate( double elapsed)
   {
     Map<int, bool> cpk = currentlyPressedKeys;
@@ -97,10 +141,35 @@ class QuakeCamera extends Animatable
     position.set( camera.getPos()).scale(100);
 
     if( cpk[Key.SPACE] != null) {
-      jump();
+      jump(false);
       cpk[Key.SPACE] = null;
     }
-    
+
+    for( String modelNumStr in bsp.cm.trigger.keys) {
+      var targetNumStr = bsp.cm.trigger[modelNumStr];
+      int modelNum = int.parse(modelNumStr.substring(1));  // remove leading * char
+
+
+      //mins.set(position).subtract(range);
+      //maxs.set(position).add(range);
+      trace_mins.set(position).add(mins);
+      trace_maxs.set(position).add(maxs);
+
+      // TransformedBoxTrace seems not to be necessary for jumppads
+      Trace trace = new Trace();
+      bsp.trace(trace, ORIGIN, ORIGIN, trace_mins, trace_maxs, modelNum, ORIGIN, -1);
+
+      if( trace.startSolid) {
+        jump(true);
+        String targetPos = bsp.cm.targets[targetNumStr];
+        List<String> split = targetPos.split(" ");
+
+        Model m = bsp.cm.models[modelNum];
+        velocity.set(AimAtTarget( m, double.parse(split[0]), double.parse(split[1]), double.parse(split[2]) ));
+        snd.playSound('jumppad');
+      }
+
+    }
     move( dir, 50.0/3.0);
     camera.setPosFromVec( position.scale(0.01));
     
@@ -112,7 +181,27 @@ class QuakeCamera extends Animatable
     movementX=0;
     movementY=0;
   }
-  
+
+  Vector AimAtTarget( Model m, double x, double y, double z ) {
+    Vector target = new Vector(x,y,z);
+    Vector origin = new Vector.fromVector(m.mins).add(m.maxs).scale(0.5);
+
+    double height = target[2] - origin[2];
+    double gravity = 800.0;
+    double time = Math.sqrt( height / ( 0.5 * gravity ) );
+    // set s.origin2 to the push velocity
+    Vector origin2 = new Vector.fromVector(target);
+    origin2.subtract(origin);
+    origin2[2] = 0.0;
+    double dist = origin2.length();
+    origin2.normalize();
+
+    double forward = dist / time;
+    origin2.scale(forward);
+    origin2[2] = time * gravity;
+    return origin2.scale(0.161); // weird value found by experimenting
+  }
+
   void friction() {
     if(!onGround) { return; }
     
@@ -193,11 +282,11 @@ class QuakeCamera extends Animatable
   }
 
   Vector tmp_j = new Vector();
-  bool jump() {
+  bool jump(bool silent) {
     if(!onGround) { return false; }
     
     onGround = false;
-    velocity[2] = q3movement_jumpvelocity*2.5;
+    velocity[2] = q3movement_jumpvelocity; // *2.5
     
     //Make sure that the player isn't stuck in the ground
     double groundDist = position.dot( groundTrace.plane.normal ) - groundTrace.plane.dist - q3movement_playerRadius;
@@ -205,7 +294,8 @@ class QuakeCamera extends Animatable
     tmp_j.set(groundTrace.plane.normal);
     
     position.add( tmp_j.scale( groundDist + 5));
-    snd.playSound('jump');
+    if(!silent)
+      snd.playSound('jump');
     
     return true;
   }

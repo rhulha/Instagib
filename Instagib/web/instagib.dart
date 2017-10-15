@@ -1,7 +1,9 @@
 library instagib;
 
 import 'dart:html' as HTML;
+import 'dart:js' as JS;
 import 'dart:math' as Math;
+import 'dart:convert' as CONVERT;
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:chronosgl/chronosgl.dart';
@@ -42,26 +44,32 @@ void main() {
   textureCache = chronosGL.getTextureCache();
   textureCache.addSolidColor("red", "rgba(255,0,0,255)");
   ["nx", "px", "nz", "pz", "ny", "py"].forEach((n)=>textureCache.add("textures/skybox_$n.png"));
-//  textureCache.add("textures/skybox_nx.png");
-//  textureCache.add("textures/skybox_px.png");
-//  textureCache.add("textures/skybox_ny.png");
-//  textureCache.add("textures/skybox_py.png");
-//  textureCache.add("textures/skybox_nz.png");
-//  textureCache.add("textures/skybox_pz.png");
-  
+
   snd.loadSound('data/jump1.wav', 'jump');
+  snd.loadSound('data/jumppad.wav', 'jumppad');
   snd.loadSound('data/railgf1a.wav', 'rail');
   
-  textureCache.loadAllThenExecute((){
-    
+  textureCache.loadAllThenExecute(() {
+
     utils.addSkybox( "textures/skybox_", ".png", "nx", "px", "nz", "pz", "ny", "py");
     
     chronosGL.getUtils().loadBinaryFile("data/q3dm17.bsp").then((ByteBuffer bspFile){
       BSPParser parser = new BSPParser(bspFile);
       ClipMap cm = parser.getClipMap();
-            
+
+      List entities = CONVERT.JSON.decode(parser.getEntities());
+
+      for (Map ent in entities) {
+        if (ent["classname"] == "trigger_push") {
+          cm.trigger[ent["model"]] = ent["target"];
+        } else if (ent["classname"] == "target_position") {
+          cm.targets[ent["targetname"]] = ent["origin"];
+        }
+      }
+
+
       changeColors(cm.surfaces, cm.drawIndexes, cm.shaders, cm.drawVerts);
-      
+
       List<double> vertsList = new List<double>();
       List<double> normalsList = new List<double>();
       List<double> texCoordsList = new List<double>();
@@ -79,24 +87,24 @@ void main() {
 
       List<int> indicesList = removeUnneededObjects(cm.surfaces, cm.shaders, cm.drawIndexes);
 
-      Uint16List  xs = new Uint16List.fromList(indicesList);
+      Uint16List xs = new Uint16List.fromList(indicesList);
       Float32List vs = new Float32List.fromList(vertsList);
       Float32List ns = new Float32List.fromList(normalsList);
       Float32List cs = new Float32List.fromList(colorsList);
 
       BSPTree bspTree = new BSPTree(cm);
-      fpscam.setBSPTree( bspTree);
-      
-      for( var a =0; a<vs.length ;a++) {
+      fpscam.setBSPTree(bspTree);
+
+      for (var a = 0; a < vs.length; a++) {
         vs[a] = vs[a] / 100;
       }
-      
-      sp.add( new MeshData(vertices: vs, normals: ns, vertexIndices: xs, colors: cs).createMesh());
+
+      sp.add(          new MeshData(vertices: vs, normals: ns, vertexIndices: xs, colors: cs)              .createMesh());
       chronosGL.run();
     });
 
   });
-  
+
  
 }
 

@@ -19,6 +19,10 @@ class ClipMap {
   var lightmaps;
   var lightGrid;
   var visibility;
-  
+
+  Map<String, String> trigger = new Map<String, String>();
+  Map<String, String> targets = new Map<String, String>();
+
+
   int checkcount=0;
 }

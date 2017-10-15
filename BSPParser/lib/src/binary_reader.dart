@@ -56,10 +56,30 @@ class BinaryReader {
   }
 
   Int32List readSignedInt(int i) {
-    //List<double> buf = new List<double>(i);
     Int32List buf = new Int32List(i);
     for (int j = 0; j < buf.length; j++) {
       buf[j] = readOneSignedInt();
+    }
+    return buf;
+  }
+
+  int readOneSignedInt16() {
+    pos += 2;
+    return dv.getInt16(pos - 2, Endianness.LITTLE_ENDIAN);
+  }
+
+  Uint16List readInt32IntoUInt16(int i) {
+    Uint16List buf = new Uint16List(i);
+    for (int j = 0; j < buf.length; j++) {
+      buf[j] = readOneSignedInt();
+    }
+    return buf;
+  }
+
+  Int16List readSignedInt16(int i) {
+    Int16List buf = new Int16List(i);
+    for (int j = 0; j < buf.length; j++) {
+      buf[j] = readOneSignedInt16();
     }
     return buf;
   }

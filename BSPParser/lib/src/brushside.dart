@@ -3,6 +3,9 @@ part of bspparser;
 class Brushside {
   int planeNum;
   int shaderNum;
+
+  int surfaceFlags;
+
   Brushside.init(this.planeNum, this.shaderNum);
   Brushside( BinaryReader br) {
     planeNum = br.readOneSignedInt();

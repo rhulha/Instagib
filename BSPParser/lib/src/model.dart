@@ -10,7 +10,15 @@ class Model {
   
   Model( BinaryReader br) {
     mins = new Vector.useList(br.readFloat(3));
+    mins.x-=1; // // spread the mins / maxs by a pixel
+    mins.y-=1;
+    mins.z-=1;
+
     maxs = new Vector.useList(br.readFloat(3));
+    maxs.x+=1; // // spread the mins / maxs by a pixel
+    maxs.y+=1;
+    maxs.z+=1;
+
     face = br.readOneSignedInt();
     numFaces = br.readOneSignedInt();
     brush = br.readOneSignedInt();

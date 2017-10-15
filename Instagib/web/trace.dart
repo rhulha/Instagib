@@ -145,18 +145,47 @@ class BSPTree {
       }
     }
 
-    // check for point special case
-    if (tw.size[0][0] == 0 && tw.size[0][1] == 0 && tw.size[0][2] == 0) {
-      tw.isPoint = true;
-      tw.extents.scale(0);
+    // check for position test special case
+    if (start[0] == end[0] && start[1] == end[1] && start[2] == end[2]) {
+      if ( modelClipHandle > 0 ) {
+        if ( modelClipHandle == 254 ) { // CAPSULE_MODEL_HANDLE
+          /*
+          if ( tw.sphere.use ) {
+            CM_TestCapsuleInCapsule( &tw, model );
+          } else {
+            CM_TestBoundingBoxInCapsule( &tw, model );
+          }
+          */
+          print("Unimplemented: modelClipHandle == 254");
+        } else {
+          Model model = cm.models[modelClipHandle];
+          Leaf leaf = new Leaf.init(0,0,null,null,model.face,model.numFaces,model.brush,model.numBrushes); // TODO stop new usage
+          TestInLeaf( tw, leaf );
+        }
+      } else {
+        //CM_PositionTest( &tw );
+        print("Unimplemented: modelClipHandle == null");
+      }
+
     } else {
-      tw.isPoint = false;
-      tw.extents[0] = tw.size[1][0];
-      tw.extents[1] = tw.size[1][1];
-      tw.extents[2] = tw.size[1][2];
+      // check for point special case
+      if (tw.size[0][0] == 0 && tw.size[0][1] == 0 && tw.size[0][2] == 0) {
+        tw.isPoint = true;
+        tw.extents.scale(0);
+      } else {
+        tw.isPoint = false;
+        tw.extents[0] = tw.size[1][0];
+        tw.extents[1] = tw.size[1][1];
+        tw.extents[2] = tw.size[1][2];
+      }
+      if ( modelClipHandle > 0 ) {
+        // if ( model == CAPSULE_MODEL_HANDLE ) skipped
+        //TraceThroughLeaf( tw, &cmod->leaf );
+      } else {
+        traceThroughTree(tw, 0, 0.0, 1.0, start, end);
+      }
     }
 
-    traceThroughTree(tw, 0, 0.0, 1.0, start, end);
 
     if (tw.trace.fraction == 1) {
       tw.trace.endPos.set(end);
@@ -166,6 +195,97 @@ class BSPTree {
 
     trace.set(tw.trace);
   }
+
+  void TestInLeaf( TraceWork tw, Leaf leaf ) {
+    // test box position against all brushes in the leaf
+    for (int k=0 ; k<leaf.numLeafBrushes ; k++) {
+      //int brushnum = cm.leafBrushes[leaf.firstLeafBrush+k];
+      //Brush b = cm.brushes[brushnum];
+      Brush b = cm.brushes[leaf.firstLeafBrush+k];
+      if (b.checkcount == cm.checkcount) {
+        continue;	// already checked this brush in another leaf
+      }
+      b.checkcount = cm.checkcount;
+
+      if ( (b.contents & tw.contents)==0) {
+        continue;
+      }
+
+      TestBoxInBrush( tw, b );
+      if ( tw.trace.allSolid ) {
+        return;
+      } else {
+      }
+    }
+
+    // test against all patches
+    /*
+    for ( k = 0 ; k < leaf->numLeafSurfaces ; k++ ) {
+      Patch patch = cm.surfaces[ cm.leafsurfaces[ leaf->firstLeafSurface + k ] ];
+      if ( !patch ) {
+        continue;
+      }
+      if ( patch->checkcount == cm.checkcount ) {
+        continue;	// already checked this brush in another leaf
+      }
+      patch->checkcount = cm.checkcount;
+
+      if ( !(patch->contents & tw->contents)) {
+        continue;
+      }
+
+      if ( PositionTestInPatchCollide( tw, patch->pc ) ) {
+        tw->trace.startsolid = tw->trace.allsolid = qtrue;
+        tw->trace.fraction = 0;
+        tw->trace.contents = patch->contents;
+        return;
+      }
+    }
+    */
+  }
+
+  void TestBoxInBrush( TraceWork tw, Brush brush ) {
+
+    if (brush.numSides==0) {
+      return;
+    }
+
+    // special test for axial
+    if ( tw.bounds[0][0] > brush.bounds[1][0]
+      || tw.bounds[0][1] > brush.bounds[1][1]
+      || tw.bounds[0][2] > brush.bounds[1][2]
+      || tw.bounds[1][0] < brush.bounds[0][0]
+      || tw.bounds[1][1] < brush.bounds[0][1]
+      || tw.bounds[1][2] < brush.bounds[0][2]
+    ) {
+      return;
+    }
+
+    // if ( tw.sphere.use ) {  } SKIPPED
+
+    // the first six planes are the axial planes, so we only
+    // need to test the remainder
+    for ( int i = 6 ; i < brush.numSides ; i++ ) {
+      Brushside side = cm.brushSides[brush.firstSide+i];
+      Plane plane = cm.planes[side.planeNum];
+
+      // adjust the plane distance appropriately for mins/maxs
+      double dist = plane.dist - DotProduct( tw.offsets[ plane.signbits ].array, plane.normal.array );
+
+      double d1 = DotProduct( tw.start.array, plane.normal.array ) - dist;
+
+      // if completely in front of face, no intersection
+      if ( d1 > 0 ) {
+        return;
+      }
+    }
+
+    // inside this brush
+    tw.trace.startSolid = tw.trace.allSolid = true;
+    tw.trace.fraction = 0.0;
+    tw.trace.contents = brush.contents;
+  }
+
 
   void traceThroughLeaf(TraceWork tw, Leaf leaf) {
     for (int i = 0; i < leaf.numLeafBrushes; i++) {
@@ -186,13 +306,13 @@ class BSPTree {
       }
       //if ( patch.checkcount == cm.checkcount ) {
       //  continue; // already checked this patch in another leaf      }
-      //patch->checkcount = cm.checkcount;
+      //patch.checkcount = cm.checkcount;
 
-      //if ( !(patch->contents & tw->contents) ) {
+      //if ( !(patch.contents & tw.contents) ) {
       //continue;      }
 
       traceThroughPatch(tw, patch);
-      //if ( !tw->trace.fraction ) {
+      //if ( !tw.trace.fraction ) {
       //return;      }
     }
 
@@ -223,7 +343,7 @@ class BSPTree {
     PatchPlane planes;
     Facet facet;
 
-    //if (tw->isPoint) {
+    //if (tw.isPoint) {
     //CM_TracePointThroughPatchCollide( tw, pc );
     //return;    }
 
@@ -239,17 +359,17 @@ class BSPTree {
       /*
       if ( tw.sphere.use ) {
         // adjust the plane distance apropriately for radius
-        plane[3] += tw->sphere.radius;
+        plane[3] += tw.sphere.radius;
 
         // find the closest point on the capsule to the plane
-        double t = DotProduct( plane, tw->sphere.offset );
+        double t = DotProduct( plane, tw.sphere.offset );
         if ( t > 0.0f ) {
-          VectorSubtract( tw->start, tw->sphere.offset, startp );
-          VectorSubtract( tw->end, tw->sphere.offset, endp );
+          VectorSubtract( tw.start, tw.sphere.offset, startp );
+          VectorSubtract( tw.end, tw.sphere.offset, endp );
         }
         else {
-          VectorAdd( tw->start, tw->sphere.offset, startp );
-          VectorAdd( tw->end, tw->sphere.offset, endp );
+          VectorAdd( tw.start, tw.sphere.offset, startp );
+          VectorAdd( tw.end, tw.sphere.offset, endp );
         }
       }
       else {
@@ -282,19 +402,19 @@ class BSPTree {
           VectorCopy(planes.plane, plane);
         }
         /* // Sphere
-        if ( tw->sphere.use ) {
+        if ( tw.sphere.use ) {
           // adjust the plane distance apropriately for radius
-          plane[3] += tw->sphere.radius;
+          plane[3] += tw.sphere.radius;
 
           // find the closest point on the capsule to the plane
-          double t = DotProduct( plane, tw->sphere.offset );
+          double t = DotProduct( plane, tw.sphere.offset );
           if ( t > 0.0f ) {
-            VectorSubtract( tw->start, tw->sphere.offset, startp );
-            VectorSubtract( tw->end, tw->sphere.offset, endp );
+            VectorSubtract( tw.start, tw.sphere.offset, startp );
+            VectorSubtract( tw.end, tw.sphere.offset, endp );
           }
           else {
-            VectorAdd( tw->start, tw->sphere.offset, startp );
-            VectorAdd( tw->end, tw->sphere.offset, endp );
+            VectorAdd( tw.start, tw.sphere.offset, startp );
+            VectorAdd( tw.end, tw.sphere.offset, endp );
           }
         }
         else {
