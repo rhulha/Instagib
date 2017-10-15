@@ -23,7 +23,11 @@ void main() {
   
   skipDefaultMouseMoveListener = true;
   chronosGL = new ChronosGL('#webgl-canvas', useFramebuffer:false, fxShader: createSobelShader(), near: 0.1, far:2520.0);
-  
+
+  //ShaderProgram sp = chronosGL.createProgram( createDebugTexCoordsShader());
+  //ShaderProgram sp = chronosGL.createProgram( createPlane2GreyShader());
+  ShaderProgram sp = chronosGL.createProgram( createInstagibLightShader());
+
   //chronosGL.getRenderingContext().enable( 0x0B44);//RenderingContext.CULL_FACE
   
   camera = chronosGL.getCamera();
@@ -50,14 +54,11 @@ void main() {
     
     utils.addSkybox( "textures/skybox_", ".png", "nx", "px", "nz", "pz", "ny", "py");
     
-    ShaderProgram sp = chronosGL.createProgram( 'Normal2Color', chronosGL.getShaderLib().createPlane2ColorShader());
-    //ShaderProgram sp = chronosGL.createProgram( 'Normal2Color', chronosGL.getShaderLib().createLightShader());
-    //ShaderProgram sp = chronosGL.createProgram( 'Normal2Color', createPlane2GreyShader());
-    
     FileCache bfc = new FileCache();
     bfc.addBinary('data/q3dm17.indices');
     bfc.addBinary('data/q3dm17.verts');
     bfc.addBinary('data/q3dm17.normals');
+    bfc.addBinary('data/q3dm17.lmcoords');
     bfc.addBinary('data/q3dm17.nodes');
     bfc.addBinary('data/q3dm17.planes');
     bfc.addBinary('data/q3dm17.leafs');
@@ -68,9 +69,10 @@ void main() {
     bfc.addText('data/q3dm17.ents');
     
     bfc.loadAllThenExecute((){
+      Uint16List  xs = bfc.get('data/q3dm17.indices').asUint16List();
       Float32List vs = bfc.get('data/q3dm17.verts').asFloat32List();
       Float32List ns = bfc.get('data/q3dm17.normals').asFloat32List();
-      Uint16List  xs = bfc.get('data/q3dm17.indices').asUint16List();
+      Float32List ts = bfc.get('data/q3dm17.texcoords').asFloat32List();
 
       List<BSPNode> nodes = BSPNode.parse(bfc.get('data/q3dm17.nodes').asInt32List());
       List<Plane> planes = Plane.parse(bfc.get('data/q3dm17.planes').asFloat32List());
@@ -87,7 +89,7 @@ void main() {
         vs[a] = vs[a] / 100;
       }
       
-      sp.add( new MeshData(vertices: vs, normals: ns, vertexIndices: xs).createMesh());
+      sp.add( new MeshData(vertices: vs, normals: ns, vertexIndices: xs, textureCoords: ts).createMesh());
       chronosGL.run();
     });
 

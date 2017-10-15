@@ -3,13 +3,13 @@ part of instagib;
 double q3bsptree_trace_offset = 0.03125;
 
 class BSPNode {
-  int plane;
+  int planeNum;
   List<int> children;
   List<int> mins;
   List<int> maxs;
-  BSPNode.init( this.plane, this.children, this.mins, this.maxs);
+  BSPNode.init( this.planeNum, this.children, this.mins, this.maxs);
   BSPNode( Int32List data) {
-    plane = data[0];
+    planeNum = data[0];
     children = data.sublist(1, 3);
     mins = data.sublist(3, 6);
     maxs = data.sublist(6, 9);
@@ -25,11 +25,11 @@ class BSPNode {
 
 class Plane {
   Vector normal;
-  double distance;
-  Plane.init( this.normal, this.distance);
+  double dist;
+  Plane.init( this.normal, this.dist);
   Plane( Float32List data) {
     normal = new Vector.useList(data.sublist(0, 3));
-    distance = data[3];
+    dist = data[3];
   }
   static List<Plane> parse(Float32List planes) {
     List<Plane> planes2 = new List<Plane>(planes.length~/4);
@@ -45,20 +45,20 @@ class Leaf {
   int area;
   List<int> mins;
   List<int> maxs;
-  int leafface;
-  int n_leaffaces;
-  int leafbrush;
-  int n_leafbrushes;
-  Leaf.init(this.cluster, this.area, this.mins, this.maxs, this.leafface, this.n_leaffaces, this.leafbrush, this.n_leafbrushes);
+  int firstLeafSurface;
+  int numLeafSurfaces;
+  int firstLeafBrush;
+  int numLeafBrushes;
+  Leaf.init(this.cluster, this.area, this.mins, this.maxs, this.firstLeafSurface, this.numLeafSurfaces, this.firstLeafBrush, this.numLeafBrushes);
   Leaf( Int32List data) {
     cluster = data[0];
     area = data[1];
     mins = data.sublist(2, 5);
     maxs = data.sublist(5, 8);
-    leafface = data[8];
-    n_leaffaces = data[9];
-    leafbrush = data[10];
-    n_leafbrushes = data[11];
+    firstLeafSurface = data[8];
+    numLeafSurfaces = data[9];
+    firstLeafBrush = data[10];
+    numLeafBrushes = data[11];
   }
   static List<Leaf> parse(Int32List leaves) {
     List<Leaf> leaves2 = new List<Leaf>(leaves.length~/12);
@@ -70,14 +70,14 @@ class Leaf {
 }
 
 class Brush {
-  int brushside;
-  int n_brushsides;
-  int texture;
-  Brush.init( this.brushside, this.n_brushsides, this.texture);
+  int firstSide;
+  int numSides;
+  int shaderNum;
+  Brush.init( this.firstSide, this.numSides, this.shaderNum);
   Brush( Int32List data) {
-    brushside = data[0];
-    n_brushsides = data[1];
-    texture = data[2];
+    firstSide = data[0];
+    numSides = data[1];
+    shaderNum = data[2];
   }
   static List<Brush> parse(Int32List brushes) {
     List<Brush> brushes2 = new List<Brush>(brushes.length~/3);
@@ -89,12 +89,12 @@ class Brush {
 }
 
 class Brushside {
-  int plane;
-  int texture;
-  Brushside.init(this.plane, this.texture);
+  int planeNum;
+  int shaderNum;
+  Brushside.init(this.planeNum, this.shaderNum);
   Brushside( Int32List data) {
-    plane = data[0];
-    texture = data[1];
+    planeNum = data[0];
+    shaderNum = data[1];
   }
   
   static List<Brushside> parse(Int32List brushSides) {
@@ -145,10 +145,10 @@ class BSPTree {
   void traceNode( int nodeIdx, double startFraction, double endFraction, Vector start, Vector end, double radius, Output output) {
     if( nodeIdx < 0) { // Leaf node?
       Leaf leaf = leaves[-(nodeIdx + 1)];
-      for( int i = 0; i < leaf.n_leafbrushes; i++) {
-        Brush brush = brushes[leafBrushes[leaf.leafbrush + i]];
-        var texture = textures[brush.texture];
-        if( brush.n_brushsides > 0 && ((texture['contents'] & 1) == 1)) {
+      for( int i = 0; i < leaf.numLeafBrushes; i++) {
+        Brush brush = brushes[leafBrushes[leaf.firstLeafBrush + i]];
+        var texture = textures[brush.shaderNum];
+        if( brush.numSides > 0 && ((texture['contentFlags'] & 1) == 1)) {
           this.traceBrush( brush, start, end, radius, output);
         }
       }
@@ -157,10 +157,10 @@ class BSPTree {
     
     // Tree node
     BSPNode node = nodes[nodeIdx];
-    Plane plane = planes[node.plane];
+    Plane plane = planes[node.planeNum];
     
-    double startDist = plane.normal.dot(start) - plane.distance;
-    double endDist = plane.normal.dot(end) - plane.distance;
+    double startDist = plane.normal.dot(start) - plane.dist;
+    double endDist = plane.normal.dot(end) - plane.dist;
     
     if (startDist >= radius && endDist >= radius) {
       this.traceNode(node.children[0], startFraction, endFraction, start, end, radius, output );
@@ -217,12 +217,12 @@ class BSPTree {
     bool endsOut = false;
     Plane collisionPlane = null;
     
-    for (int i = 0; i < brush.n_brushsides; i++) {
-        Brushside brushSide = brushSides[brush.brushside + i];
-        Plane plane = planes[brushSide.plane];
+    for (int i = 0; i < brush.numSides; i++) {
+        Brushside brushSide = brushSides[brush.firstSide + i];
+        Plane plane = planes[brushSide.planeNum];
         
-        double startDist = start.dot(plane.normal ) - (plane.distance + radius);
-        double endDist = end.dot(plane.normal ) - (plane.distance + radius);
+        double startDist = start.dot(plane.normal ) - (plane.dist + radius);
+        double endDist = end.dot(plane.normal ) - (plane.dist + radius);
 
         if (startDist > 0) startsOut = true;
         if (endDist > 0) endsOut = true;

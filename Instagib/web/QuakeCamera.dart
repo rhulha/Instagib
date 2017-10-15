@@ -46,17 +46,18 @@ class QuakeCamera extends Animatable
   
   QuakeCamera( this.camera) {
 
-    HTML.document.onMouseDown.listen( (HTML.MouseEvent e) {
+    HTML.CanvasElement canvas = HTML.document.querySelector('#webgl-canvas');
+    canvas.onMouseDown.listen( (HTML.MouseEvent e) {
       e.preventDefault();
-      if( HTML.document.pointerLockElement != HTML.document.body)
-        HTML.document.body.requestPointerLock();
+      if( HTML.document.pointerLockElement != canvas)
+        canvas.requestPointerLock();
       else {
         snd.playSound('rail');
         addLaser(camera, 0, -0.2);
       }
     });
     
-    HTML.document.body.onMouseMove.listen( (HTML.MouseEvent e) {
+    canvas.onMouseMove.listen( (HTML.MouseEvent e) {
       e.preventDefault();
       movementX += e.movement.x;
       movementY += e.movement.y;
@@ -198,7 +199,7 @@ class QuakeCamera extends Animatable
     velocity[2] = q3movement_jumpvelocity*2.5;
     
     //Make sure that the player isn't stuck in the ground
-    double groundDist = position.dot( groundTrace.plane.normal ) - groundTrace.plane.distance - q3movement_playerRadius;
+    double groundDist = position.dot( groundTrace.plane.normal ) - groundTrace.plane.dist - q3movement_playerRadius;
     
     tmp_j.set(groundTrace.plane.normal);
     

@@ -1,63 +1,7 @@
 part of instagib;
 
-
-ShaderObject createDepthShader() {
-  ShaderObject shaderObject = new ShaderObject();
-  
-  shaderObject.vertexShader = """
-        precision mediump float;
-        attribute vec3 aVertexPosition;
-        attribute vec2 aTextureCoord;
-        
-        uniform mat4 uMVMatrix;
-        uniform mat4 uPMatrix;
-        
-        varying vec2 vTextureCoord;
-        
-        void main(void) {
-          gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
-          vTextureCoord = aTextureCoord;
-        }
-        """;
-  
-  shaderObject.fragmentShader = """
-        precision mediump float;
-        
-        varying vec2 vTextureCoord;
-        uniform sampler2D uSampler;
-        uniform sampler2D depthSampler;
-  
-        uniform float cameraNear;
-        uniform float cameraFar;
-        
-        float linearizeDepth(float z)
-        {
-          float n = cameraNear; // camera z near
-          float f = cameraFar; // camera z far
-          return (2.0 * n) / (f + n - z * (f - n)); 
-        }
-
-        void main(void) {
-          vec4 texel = texture2D(depthSampler, vTextureCoord);
-          gl_FragColor = vec4(vec3(linearizeDepth(texel.x)), 1.0);
-        }
-        """;
-  
-  shaderObject.vertexPositionAttribute = "aVertexPosition"; 
-  shaderObject.textureCoordinatesAttribute = "aTextureCoord";
-  shaderObject.modelViewMatrixUniform = "uMVMatrix";
-  shaderObject.perpectiveMatrixUniform = "uPMatrix";
-  shaderObject.textureSamplerUniform = "uSampler";
-  shaderObject.texture2SamplerUniform = "depthSampler";
-  shaderObject.cameraNear = "cameraNear";
-  shaderObject.cameraFar = "cameraFar";
-    
-  return shaderObject;
-}
-
-
-ShaderObject createPlane2GreyShader() {
-  ShaderObject shaderObject = new ShaderObject();
+ShaderObject createInstagibLightShader() {
+  ShaderObject shaderObject = new ShaderObject("Light");
   
   shaderObject.vertexShader = """
         precision mediump float;
@@ -67,22 +11,38 @@ ShaderObject createPlane2GreyShader() {
         
         uniform mat4 uMVMatrix;
         uniform mat4 uPMatrix;
+
+        vec3 lightDir = vec3(1.0,0.0,1.0);
+        vec3 ambientColor = vec3(0.0,0.0,0.0);
+        vec3 directionalColor = vec3(1.0,1.0,1.0);
+
+        vec3 pointLightLocation = vec3( 190, 50, 500);
         
-        varying vec3 vColor;
+        varying vec3 vLightWeighting;
+        varying vec3 vNormal;
 
         void main(void) {
           gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
-          float d=sin(dot( aVertexPosition, aNormal)) / 2.0 + 0.5;
-          vColor = vec3(d,d,d);
+          vNormal = (uMVMatrix * vec4(aNormal, 0.0)).xyz;
+
+          pointLightLocation = (uMVMatrix * vec4(pointLightLocation, 0.0)).xyz;
+
+          vec3 lightDir = normalize(pointLightLocation - aVertexPosition.xyz);
+
+          float directionalLightWeighting = max(dot(vNormal, normalize(lightDir)), 0.0);
+          vLightWeighting = ambientColor + directionalColor * directionalLightWeighting;
         }
         """;
   
   shaderObject.fragmentShader = """
         precision mediump float;
+        
+        varying vec3 vLightWeighting;
+        varying vec3 vNormal;
 
-        varying vec3 vColor;
         void main(void) {
-          gl_FragColor = vec4( vColor, 1.0 );
+          //gl_FragColor = vec4( vNormal * vLightWeighting, 1.0 );
+          gl_FragColor = vec4( vLightWeighting, 1.0 );
         }
         """;
   
@@ -94,8 +54,9 @@ ShaderObject createPlane2GreyShader() {
   return shaderObject;
 }
 
-ShaderObject createSobelShader() {
-  ShaderObject shaderObject = new ShaderObject();
+
+ShaderObject createInstagibSobelShader() {
+  ShaderObject shaderObject = new ShaderObject("InstagibSobel");
   
   shaderObject.vertexShader = """
   precision mediump float;
