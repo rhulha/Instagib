@@ -46,7 +46,7 @@ class QuakeCamera extends Animatable
   
   QuakeCamera( this.camera) {
 
-    HTML.CanvasElement canvas = HTML.document.querySelector('#webgl-canvas');
+    HTML.HtmlElement canvas = HTML.document.body;// querySelector('#webgl-canvas');
     canvas.onMouseDown.listen( (HTML.MouseEvent e) {
       e.preventDefault();
       if( HTML.document.pointerLockElement != canvas) {
@@ -111,12 +111,14 @@ class QuakeCamera extends Animatable
     movementY=0;
   }
   
-  void applyFriction() {
+  void friction() {
     if(!onGround) { return; }
+    
+    // TODO: ignore slope movement
     
     double speed = velocity.length();
     
-    double control = speed < q3movement_stopspeed ? q3movement_stopspeed : speed;
+    double control = Math.max(speed, q3movement_stopspeed); // speed < q3movement_stopspeed ? q3movement_stopspeed : speed;
     double drop = control*q3movement_friction*q3movement_frameTime;
     
     double newSpeed = speed - drop;
@@ -125,6 +127,7 @@ class QuakeCamera extends Animatable
     }
     if( speed != 0.0) {
         newSpeed /= speed;
+        //HTML.querySelector("#info").text = "$newSpeed, $speed, $drop"; // -25, 50, 75
         velocity.scale(newSpeed);
     } else {
         velocity.scale(0.0);
@@ -140,7 +143,7 @@ class QuakeCamera extends Animatable
     groundTrace = _bsp.trace( position, checkPoint, q3movement_playerRadius);
     
     if( groundTrace.fraction == 1.0) { // falling
-        HTML.querySelector("#info").text = 'falling: ' + position.toString();
+        //HTML.querySelector("#info").text = 'falling: ' + position.toString();
         onGround = false;
         return;
     }
@@ -161,36 +164,26 @@ class QuakeCamera extends Animatable
   Vector tmp_cv = new Vector();
   Vector clipVelocity( Vector velIn, Vector normal, Vector out) {
     double backoff = velIn.dot(normal);
-    
     if( backoff < 0.0 ) {
         backoff *= q3movement_overclip;
     } else {
         backoff /= q3movement_overclip;
     }
-    
-    out.set(velIn);
-    tmp_cv.set( normal);
-    tmp_cv.scale( backoff);
-    
-    return out.subtract( tmp_cv);
+    return out.set(velIn).subtract( tmp_cv.set( normal).scale( backoff));
+    // TODO: return out.set(normal).scale(-backoff).add(velIn);
   }
 
-  Vector tmp_a = new Vector();
-  void accelerate( Vector dir, double speed, double accel) {
-    double currentSpeed = velocity.dot( dir);
-    double addSpeed = speed - currentSpeed;
+  void accelerate( Vector wishdir, double wishspeed, double accel) {
+    double currentSpeed = velocity.dot( wishdir);
+    double addSpeed = wishspeed - currentSpeed;
     if( addSpeed <= 0) {
         return;
     }
-    
-    double accelSpeed = accel*q3movement_frameTime*speed;
+    double accelSpeed = accel*q3movement_frameTime*wishspeed;
     if( accelSpeed > addSpeed) {
         accelSpeed = addSpeed;
     }
-    
-    tmp_a.set(dir);
-    tmp_a.scale( accelSpeed);
-    velocity.add( tmp_a);
+    velocity.addScaledVector( wishdir, accelSpeed);
   }
 
   Vector tmp_j = new Vector();
@@ -214,7 +207,7 @@ class QuakeCamera extends Animatable
   Vector move( Vector dir, double frameTime) {
     q3movement_frameTime = frameTime*0.0075;
     
-    HTML.querySelector("#info").text = 'onGround';
+    //HTML.querySelector("#info").text = 'onGround';
     groundCheck();
     
     dir.normalize();
@@ -231,6 +224,7 @@ class QuakeCamera extends Animatable
   }
 
   void airMove( Vector dir) {
+    // TODO: is dir normalized, I think accelerate expects it to be
     double speed = dir.length() * q3movement_scale;
     
     accelerate( dir, speed, q3movement_airaccelerate);
@@ -239,12 +233,13 @@ class QuakeCamera extends Animatable
   }
 
   void walkMove( Vector dir) {
-    applyFriction();
+    friction();
     
     double speed = dir.length() * q3movement_scale;
     
     accelerate( dir, speed, q3movement_accelerate);
     
+    // TODO: don't decrease velocity when going up or down a slope
     clipVelocity( velocity, groundTrace.plane.normal, velocity);
     
     if( velocity[0]==0 && velocity[1]==0 ) { return; }
@@ -256,6 +251,7 @@ class QuakeCamera extends Animatable
   Vector clipVelocity_ = new Vector();
   Vector endClipVelocity = new Vector();
   
+  // Returns true if the velocity was clipped in some way
   bool slideMove( bool gravity) {
     int bumpcount = 0;
     int numbumps = 4;
