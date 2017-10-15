@@ -2,9 +2,9 @@ name: Instagib
 description: Instagib Q3DM17 running with WebGL
 dependencies:
   chronosgl:
-    path: C:\Users\Ray\dart\ChronosGL
+    path: C:\Coding\Projekte\Privat\ChronosGL
   chronosal:
-    path: C:\Users\Ray\dart\ChronosAL
+    path: C:\Coding\Projekte\Privat\ChronosAL
   bspparser:
-    path: C:\Users\Ray\dart\BSPParser
+    path: C:\Coding\Projekte\Privat\Q3MapConverter\Dart\BSPParser
   browser: any

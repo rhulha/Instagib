@@ -2,5 +2,5 @@ name: bspparser
 description: A Quake3 BSP file parser
 dependencies:
   chronosgl:
-    path: C:\Users\Ray\dart\ChronosGL
+    path: C:\Coding\Projekte\Privat\ChronosGL
 #  unittest: any

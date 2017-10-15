@@ -95,11 +95,11 @@ void addLaser( Spatial spatial, num moveLeft, num moveUp ) {
   {
     //console.log("laser found in cache");
     laserBeam.enabled=true;
-    laserBeam.matrix.identity();
+    laserBeam.transform.identity();
   } else {
     //console.log("laser cache miss");
     Mesh laserMesh = new Mesh( createCylinder( 0.1, LASER_LENGTH*2.0, 20, textureCache.get("red")));
-    laserMesh.matrix.rotate(0.5*Math.PI, laserMesh.getRight()); // point the cylinder forward
+    laserMesh.transform.rotate(0.5*Math.PI, laserMesh.getRight()); // point the cylinder forward
     laserBeam = new LaserBeam( laserMesh);
     laserBeam.type = "laser";
     laserBeam.invert = true;
@@ -107,7 +107,7 @@ void addLaser( Spatial spatial, num moveLeft, num moveUp ) {
 
   laserBeam.lifeTime = 10 * 1000; // 10 secs
 
-  laserBeam.matrix.setElements(spatial.matrix);
+  laserBeam.transform.setElements(spatial.transform);
   laserBeam.moveLeft( moveLeft);
   laserBeam.moveUp( moveUp);
 

@@ -105,9 +105,9 @@ class QuakeCamera extends Animatable
     camera.setPosFromVec( position.scale(0.01));
     
     if( movementY!=0)
-      camera.matrix.rotate( movementY*0.006, camera.getRight());
+      camera.transform.rotate( movementY*0.006, camera.getRight());
     if( movementX!=0)
-      camera.matrix.rotate( movementX*0.006, qup);
+      camera.transform.rotate( movementX*0.006, qup);
     
     movementX=0;
     movementY=0;
