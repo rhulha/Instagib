@@ -3,7 +3,14 @@ part of instagib;
 class Plane {
   Vector normal;
   double dist;
-  Plane.init( this.normal, this.dist);
+  int type;
+  int signbits;
+  
+  Plane.init( this.normal, this.dist) {
+    type = planeTypeForNormal(normal);
+    signbits = signbitsForNormal(normal.array);
+  }
+
   Plane( [BinaryReader br]) {
     if( br != null) {
       normal = new Vector.useList(br.readFloat(3));
@@ -12,7 +19,11 @@ class Plane {
       normal = new Vector();
       dist = 0.0;
     }
+    
+    type = planeTypeForNormal(normal);
+    signbits = signbitsForNormal(normal.array);
   }
+  
   static List<Plane> parse(BinaryReader br) {
     int count = br.length~/(4*4); // 9 * float32
     List<Plane> planes = new List<Plane>(count);

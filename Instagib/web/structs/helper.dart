@@ -32,9 +32,9 @@ void VectorMA(Vector v, num s, List<double> b, Vector o) {
 }
 
 double VectorNormalize(List<double> v) {
-  double length = Math.sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
-  if ( length!=0 ) {
-    double ilength = 1/length;
+  double length = Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+  if (length != 0) {
+    double ilength = 1 / length;
     v[0] *= ilength;
     v[1] *= ilength;
     v[2] *= ilength;
@@ -44,16 +44,13 @@ double VectorNormalize(List<double> v) {
 
 // #define  SnapVector(v) {v[0]=((int)(v[0]));v[1]=((int)(v[1]));v[2]=((int)(v[2]));}
 void snapVector(Vector normal) {
-  for (int i=0 ; i<3 ; i++)
-  {
-    if ( (normal[i] - 1).abs() < NORMAL_EPSILON )
-    {
+  for (int i = 0; i < 3; i++) {
+    if ((normal[i] - 1).abs() < NORMAL_EPSILON) {
       normal.scale(0);
       normal[i] = 1.0;
       break;
     }
-    if ( (normal[i] - -1).abs() < NORMAL_EPSILON )
-    {
+    if ((normal[i] - -1).abs() < NORMAL_EPSILON) {
       normal.scale(0);
       normal[i] = -1.0;
       break;
@@ -79,6 +76,10 @@ bool planeEqual(PatchPlane p, List<double> plane, Wrapper<bool> flipped) {
     return true;
   }
   return false;
+}
+
+int planeTypeForNormal(Vector v) {
+  return v[0] == 1.0 ? 0 : (v[1] == 1.0 ? 1 : (v[2] == 1.0 ? 2 : 3));
 }
 
 int signbitsForNormal(List<double> normal) {

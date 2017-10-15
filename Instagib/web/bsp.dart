@@ -323,7 +323,7 @@ class BSPTree {
   ==================
   */
   void traceThroughTree(TraceWork tw, int num, double p1f, double p2f, Vector p1, Vector p2) {
-    double offset;
+    double t1, t2, offset;
     double frac, frac2, idist;
     Vector mid = new Vector();
     int side;
@@ -345,17 +345,21 @@ class BSPTree {
     BSPNode node = myBSP.nodes[num];
     Plane plane = myBSP.planes[node.planeNum];
   
-// adjust the plane distance apropriately for mins/maxs
-
-    // TODO: if ( plane->type < 3 ) {...}
-    double t1 = plane.normal.dot(p1) - plane.dist;
-    double t2 = plane.normal.dot(p2) - plane.dist;
-    if(tw.isPoint) {
-      offset=0.0;
+    // adjust the plane distance apropriately for mins/maxs
+    if ( plane.type < 3 ) {
+      t1 = p1[plane.type] - plane.dist;
+      t2 = p2[plane.type] - plane.dist;
+      offset = tw.extents[plane.type]; // TODO: make sure extents is correctly filled
     } else {
-      offset=2048.0; // this is silly
+      t1 = plane.normal.dot(p1) - plane.dist;
+      t2 = plane.normal.dot(p2) - plane.dist;
+      if(tw.isPoint) {
+        offset=0.0;
+      } else {
+        offset=2048.0; // this is silly
+      }
     }
-
+  
     if (t1 >= offset + 1 && t2 >= offset + 1) {
       traceThroughTree(tw, node.children[0], p1f, p2f, p1, p2);
       return;
@@ -410,59 +414,84 @@ class BSPTree {
   }
 
   void traceThroughBrush(TraceWork tw, Brush brush) {
+    Plane clipplane = null;
+    double dist;
     double enterFrac = -1.0;
     double leaveFrac = 1.0;
-    bool startsOut = false;
-    bool endsOut = false;
-    Plane clipplane = null;
+    bool startout = false;
+    bool getout = false;
+    double f;
     
     Brushside leadside;
 
+    // TODO: if( tw.sphere.use)
+    
     for (int i = 0; i < brush.numSides; i++) {
-      Brushside brushSide = myBSP.brushSides[brush.firstSide + i];
-      Plane plane = myBSP.planes[brushSide.planeNum];
+      Brushside side = myBSP.brushSides[brush.firstSide + i];
+      Plane plane = myBSP.planes[side.planeNum];
 
-      double startDist = tw.start.dot(plane.normal) - (plane.dist + radius);
-      double endDist = tw.end.dot(plane.normal) - (plane.dist + radius);
+      // adjust the plane distance apropriately for mins/maxs
+      dist = plane.dist - tw.offsets[plane.signbits].dot(plane.normal);
 
-      if (startDist > 0) startsOut = true;
-      if (endDist > 0) endsOut = true;
+      double d1 = tw.start.dot(plane.normal) - dist;
+      double d2 = tw.end.dot(plane.normal) - dist;
 
-      // make sure the trace isn't completely on one side of the brush
-      if (startDist > 0 && endDist > 0) {
+      if (d2 > 0) getout = true; // endpoint is not in solid
+      if (d1 > 0) startout = true;
+
+      // if completely in front of face, no intersection with the entire brush
+      if (d1 > 0 && ( d2 >= SURFACE_CLIP_EPSILON || d2 >= d1 ) ) {
         return;
       }
-      if (startDist <= 0 && endDist <= 0) {
+
+      // if it doesn't cross the plane, the plane isn't relevent
+      if (d1 <= 0 && d2 <= 0) {
         continue;
       }
 
-      if (startDist > endDist) { // line is entering into the brush
-        double fraction = (startDist - q3bsptree_trace_offset) / (startDist - endDist);
-        if (fraction > enterFrac) {
-          enterFrac = fraction;
+      // crosses face
+      if (d1 > d2) { // line is entering into the brush
+        double f = (d1-SURFACE_CLIP_EPSILON) / (d1-d2);
+        if( f < 0)
+          f=0.0;
+        if (f > enterFrac) {
+          enterFrac = f;
           clipplane = plane;
+          leadside = side;
         }
       } else { // line is leaving the brush
-        double fraction = (startDist + q3bsptree_trace_offset) / (startDist - endDist);
-        if (fraction < leaveFrac) leaveFrac = fraction;
+        f = (d1+SURFACE_CLIP_EPSILON) / (d1-d2);
+        if( f > 1)
+          f=1.0;
+        if (f < leaveFrac)
+          leaveFrac = f;
       }
     }
 
-    if (startsOut == false) {
+    // all planes have been checked, and the trace was not
+    // completely outside the brush
+    
+    if (!startout) { // original point was inside brush
       tw.trace.startSolid = true;
-      if (endsOut == false) tw.trace.allSolid = true;
+      if (!getout) {
+        tw.trace.allSolid = true;
+        tw.trace.fraction = 0.0;
+        tw.trace.contents = myBSP.shaders[brush.shaderNum].contentFlags;
+      }
       return;
     }
 
     if (enterFrac < leaveFrac) {
       if (enterFrac > -1 && enterFrac < tw.trace.fraction) {
-        if (enterFrac < 0.0) enterFrac = 0.0;
+        if (enterFrac < 0.0)
+          enterFrac = 0.0;
         tw.trace.fraction = enterFrac;
         tw.trace.plane = clipplane;
-        //tw.trace.surfaceFlags = lead;
+        tw.trace.surfaceFlags = myBSP.shaders[leadside.shaderNum].surfaceFlags;
+        tw.trace.contents = myBSP.shaders[brush.shaderNum].contentFlags;
       }
     }
 
-    return;
+   
   }
 }
