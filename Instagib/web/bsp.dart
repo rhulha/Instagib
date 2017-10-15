@@ -30,13 +30,14 @@ class BSPTree {
   
   int totalPatchBlocks=0;
   int numPlanes;
-  List<PatchPlane> planes = new List<PatchPlane>(2048);
+  List<PatchPlane> planes = new List<PatchPlane>.generate(2048, (idx)=>new PatchPlane());
   int numFacets;
-  List<Facet> facets = new List<Facet>(2048);
+  List<Facet> facets = new List<Facet>.generate(2048, (idx)=>new Facet());
+
+  List<Patch> patches = new List<Patch>();
   
   BSPTree( this.myBSP) {
     
-    List<Patch> patches = new List<Patch>();
     
     for (Surface surface in myBSP.surfacesUntessellated) {
       if (surface.surfaceType == Surface.patch) {
@@ -112,7 +113,7 @@ class BSPTree {
   void patchCollideFromGrid(Grid grid, PatchCollide pc) {
     int i, j;
     Vector p1, p2, p3;
-    List<List<List<int>>> gridPlanes = new List<List<List<int>>>.generate(129, (idx)=> new List<List<int>>.generate(129, (idx)=>new List<int>())); //[MAX_GRID_SIZE][MAX_GRID_SIZE][2];
+    List<List<List<int>>> gridPlanes = new List<List<List<int>>>.generate(129, (idx)=> new List<List<int>>.generate(129, (idx)=>new List<int>(2))); //[MAX_GRID_SIZE][MAX_GRID_SIZE][2];
     
     Facet facet;
     List<int> borders  = new List<int>(4);
@@ -269,7 +270,7 @@ class BSPTree {
     List<double> newplane=new List<double>(4);
     double d;
     Winding w, w2;
-    Vector mins, maxs, vec = new Vector(), vec2;
+    Vector mins = new Vector(), maxs = new Vector(), vec = new Vector(), vec2 = new Vector();
 
     VectorCopy( planes[ facet.surfacePlane ].plane, plane );
 
@@ -512,7 +513,7 @@ class BSPTree {
     List<double> plane=new List<double>(4);
     int j;
     Winding w;
-    List<Vector> bounds; // = new List<Vector>.generate(2, (idx)=>new Vector());
+    List<Vector> bounds = new List<Vector>.generate(2, (idx)=>new Vector());
 
     if ( facet.surfacePlane == -1 ) {
       return false;
@@ -582,7 +583,7 @@ class BSPTree {
     double dot;
     int i, j;
     Vector p1, p2;
-    Vector  mid;
+    Vector  mid = new Vector();
     Winding f;
     int maxpts;
 
@@ -798,7 +799,7 @@ class BSPTree {
   
   int edgePlaneNum(Grid grid, List<List<List<int>>> gridPlanes, int i, int j, int k) {
     Vector p1, p2;
-    Vector up;
+    Vector up = new Vector();
     int p;
 
     switch( k) {

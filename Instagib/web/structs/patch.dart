@@ -15,7 +15,7 @@ class Grid {
 }
 
 class Winding {
-  int numpoints;
+  int numpoints=0;
   List<Vector> p;
 
   Winding([int maxpts=4]) {
