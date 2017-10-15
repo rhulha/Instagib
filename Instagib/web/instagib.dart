@@ -8,6 +8,7 @@ import 'package:chronosgl/chronosgl.dart';
 import 'sound.dart';
 import 'loader/BSPParser.dart';
 
+part 'structs/helper.dart';
 part 'q3dm17.dart';
 part 'bsp.dart';
 part 'QuakeCamera.dart';

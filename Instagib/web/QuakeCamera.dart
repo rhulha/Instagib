@@ -33,7 +33,7 @@ class QuakeCamera extends Animatable
   Vector position = new Vector();
   bool onGround = false;
   
-  Output groundTrace = null;
+  Trace groundTrace = null;
 
   Vector tmp = new Vector();
 
@@ -286,7 +286,7 @@ class QuakeCamera extends Animatable
       end.add( new Vector().set(velocity).scale( time_left) ); // TODO: use tmp
         
         // see if we can make it there
-        Output trace = _bsp.trace( position, end, q3movement_playerRadius);
+        Trace trace = _bsp.trace( position, end, q3movement_playerRadius);
 
         if( trace.allSolid) {
             // entity is completely trapped in another solid
@@ -388,7 +388,7 @@ class QuakeCamera extends Animatable
 
     down.set( start_o);
     down[2] -= q3movement_stepsize;
-    Output trace = _bsp.trace( start_o, down, q3movement_playerRadius);
+    Trace trace = _bsp.trace( start_o, down, q3movement_playerRadius);
     
     up.set(qup);  
     
