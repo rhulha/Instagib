@@ -4,10 +4,30 @@ class FPSCamera extends Animatable
 {
   Camera camera;
   Vector momentum = new Vector();
+  Vector movement = new Vector();
+  Vector tmp = new Vector();
   
   BSPTree bsp;
   
-  FPSCamera( this.camera);
+  Vector up = new Vector(0.0,0.0,1.0);
+  
+  int movementX=0;
+  int movementY=0;
+  
+  FPSCamera( this.camera) {
+
+    HTML.document.onMouseDown.listen( (HTML.MouseEvent e) {
+      e.preventDefault();
+      HTML.document.body.requestPointerLock();
+    });
+    
+    HTML.document.body.onMouseMove.listen( (HTML.MouseEvent e) {
+      e.preventDefault();
+      movementX += e.movement.x;
+      movementY += e.movement.y;
+    });
+
+  }
   
   void setBSPTree( BSPTree bsp) {
     this.bsp = bsp;
@@ -18,54 +38,39 @@ class FPSCamera extends Animatable
     Map<int, bool> cpk = currentlyPressedKeys;
     Map<String, bool> cpmb = currentlyPressedMouseButtons;
     
-    if (cpk[Key.A] != null) {
-      moveLeft(0.03);
-    } else if (cpk[Key.D] != null) {
-      moveRight(0.03);
-    }
+    movement.scale(0);
+    
     if (cpk[Key.W] != null) {
-      moveForward(0.03);
-    } else if (cpk[Key.S] != null) {
-      moveBackward(0.03);
+      movement.subtract( camera.getBack() );
     }
+    if (cpk[Key.A] != null) {
+      movement.subtract( camera.getRight() );
+    }
+    if (cpk[Key.S] != null) {
+      movement.add( camera.getBack() );
+    }
+    if (cpk[Key.D] != null) {
+      movement.add( camera.getRight() );
+    }
+    
+    movement.z = 0.0;
+    movement.normalize();
+    momentum.add(movement);
+    tmp.set(momentum);
+    tmp.scale(0.02);
+    camera.translateFromVec(tmp);
+    momentum.scale( 0.85);
     
     if( cpk[Key.SPACE] != null) {
-      momentum.scale( 0.92 );
     }
     
-    if( mouseY!=0)
-      camera.lookUp(mouseY*0.00006);
-    if( mouseX!=0)
-      camera.lookLeft(-mouseX*0.00003);
-
-    camera.translateFromVec( momentum );
+    if( movementY!=0)
+      camera.matrix.rotate( movementY*0.006, camera.getRight());
+    if( movementX!=0)
+      camera.matrix.rotate( movementX*0.006, up);
+    
+    movementX=0;
+    movementY=0;
   }
   
-  void moveForward(double amount) {
-    Vector back = camera.getBack();
-    back.negate();
-    momentum.lerp( back, amount);
-  }
-  void moveBackward(double amount) {
-    Vector back = camera.getBack();
-    momentum.lerp( back, amount);
-  }
-  void moveUp( num amount) {
-    Vector up = camera.getUp();
-    momentum.lerp( up, amount);
-  }
-  void moveDown( num amount) {
-    Vector up = camera.getUp();
-    up.negate();
-    momentum.lerp( up, amount);
-  }
-  void moveLeft( num amount) {
-    Vector right = camera.getRight();
-    right.negate();
-    momentum.lerp( right, amount);
-  }
-  void moveRight( num amount) {
-    Vector right = camera.getRight();
-    momentum.lerp( right, amount);
-  }
 }

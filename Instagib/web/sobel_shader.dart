@@ -43,7 +43,7 @@ ShaderObject getSobelShader() {
   }
 
   float sobel_c(sampler2D colorSampler) {
-      vec2 imageIncrement = vec2(1.0/1920.0,1.0/900.0);
+      vec2 imageIncrement = vec2(1.0/1920.0,1.0/980.0);
       float t00 = lum_c(texture2D(colorSampler, vTextureCoord + imageIncrement * vec2(-1, -1)));
       float t10 = lum_c(texture2D(colorSampler, vTextureCoord + imageIncrement * vec2( 0, -1)));
       float t20 = lum_c(texture2D(colorSampler, vTextureCoord + imageIncrement * vec2( 1, -1)));
@@ -78,12 +78,21 @@ ShaderObject getSobelShader() {
 
     if( true )
     {
-      float len_d = sobel_d(depthSampler);
+      float len_d = 0.0; sobel_d(depthSampler);
       float len_c = sobel_c(colorSampler);
       float len = len_d + len_c;
       if( len > 1.0 ) len = 1.0;
       //len = 1.0 - len; 
-      gl_FragColor = vec4(0.0, len, len, 1.0);
+
+
+      if( len > 0.95) {
+        len = 1.0 - len;
+        gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+      } else {
+        gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0); texture2D(colorSampler, vTextureCoord);
+      }
+
+        gl_FragColor = vec4(0, len, len, 1.0);
     } else {
 
       vec4 texel = texture2D(colorSampler, vTextureCoord);

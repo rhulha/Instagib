@@ -1,5 +1,6 @@
 library instagib;
 
+import 'dart:html' as HTML;
 import 'dart:async';
 import 'package:ChronosGL/chronos_gl.dart';
 import 'dart:typed_data';
@@ -10,12 +11,13 @@ part 'sobel_shader.dart';
 
 void main() {
   
-  ChronosGL chronosGL = new ChronosGL('#webgl-canvas', useFramebuffer:true, fxShader: getSobelShader(), far:520.0);
+  ChronosGL chronosGL = new ChronosGL('#webgl-canvas', useFramebuffer:false, fxShader: getSobelShader(), far:2520.0);
   
   // gl.enable(gl.CULL_FACE);
   
   Camera camera = chronosGL.getCamera();
-  camera.setPos( 0.0, 0.0, 56.0 );
+  camera.setPos( 0.0, 0.0, 6.0 );
+  camera.lookAt(new Vector(1.0, 0.0, 6.0), new Vector(0.0,0.0,1.0));
   FPSCamera fpscam = new FPSCamera(camera);
   chronosGL.addAnimatable('fpscam', fpscam);
   
@@ -31,7 +33,7 @@ void main() {
     
     utils.addSkybox( "textures/skybox_", ".png", "nx", "px", "nz", "pz", "ny", "py");
     
-    ShaderProgram sp = chronosGL.createProgram( 'Normal2Color', chronosGL.getShaderLib().createNormal2ColorShader());
+    ShaderProgram sp = chronosGL.createProgram( 'Normal2Color', chronosGL.getShaderLib().createLightShader());
     
     var indices = utils.loadBinaryFile( 'data/q3dm17.indices');
     var verts = utils.loadBinaryFile( 'data/q3dm17.verts');
