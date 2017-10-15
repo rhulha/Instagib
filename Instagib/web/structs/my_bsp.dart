@@ -1,6 +1,6 @@
 part of instagib;
 
-class MyBSP {
+class ClipMap {
   var entities;
   List<Shader> shaders;
   List<Plane> planes;

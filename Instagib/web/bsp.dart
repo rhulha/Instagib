@@ -1,6 +1,6 @@
 part of instagib;
 
-double q3bsptree_trace_offset = 0.03125;
+double q3bsptree_trace_offset = 0.03125; // TODO: remove
 final Vector ORIGIN = new Vector(0.0,0.0,0.0);
 
 class Trace {
@@ -62,10 +62,10 @@ class WrapHit {
 }
 
 class BSPTree {
-  MyBSP myBSP;
+  ClipMap cm;
 
-  BSPTree(this.myBSP) {
-    for (Surface surface in myBSP.surfacesUntessellated) {
+  BSPTree(this.cm) {
+    for (Surface surface in cm.surfacesUntessellated) {
       if (surface.surfaceType != Surface.patch) {
         continue;
       }
@@ -73,8 +73,8 @@ class BSPTree {
       int height = surface.patch_size[1];
       int c = width * height;
       assert(c <= 1024);
-      List<Vector> points = new List<Vector>.generate(c, (idx) => new Vector.fromList(myBSP.drawVerts[surface.firstVert + idx].xyz));
-      Patch patch = new Patch(myBSP.shaders[surface.shaderNum]);
+      List<Vector> points = new List<Vector>.generate(c, (idx) => new Vector.fromList(cm.drawVerts[surface.firstVert + idx].xyz));
+      Patch patch = new Patch(cm.shaders[surface.shaderNum]);
       patch.pc = generatePatchCollide(width, height, points);
       patches.add(patch);
     }
@@ -110,15 +110,15 @@ class BSPTree {
 
   void traceThroughLeaf(TraceWork tw, Leaf leaf) {
     for (int i = 0; i < leaf.numLeafBrushes; i++) {
-      Brush brush = myBSP.brushes[myBSP.leafBrushes[leaf.firstLeafBrush + i]];
-      Shader shader = myBSP.shaders[brush.shaderNum];
+      Brush brush = cm.brushes[cm.leafBrushes[leaf.firstLeafBrush + i]];
+      Shader shader = cm.shaders[brush.shaderNum];
       if (brush.numSides > 0 && ((shader.contentFlags & 1) == 1)) {
         this.traceThroughBrush(tw, brush);
       }
     }
 
     for (int k = 0; k < leaf.numLeafSurfaces; k++) {
-      Patch patch = patches[myBSP.leafSurfaces[leaf.firstLeafSurface + k]];
+      Patch patch = patches[cm.leafSurfaces[leaf.firstLeafSurface + k]];
       if (patch == null) {
         continue;
       }
@@ -335,15 +335,15 @@ class BSPTree {
     
     // if < 0, we are in a leaf node
     if (num < 0) {
-      traceThroughLeaf(tw, myBSP.leafs[-1-num]);
+      traceThroughLeaf(tw, cm.leafs[-1-num]);
       return;
     }
 
     // find the point distances to the seperating plane
     // and the offset for the size of the box
 
-    BSPNode node = myBSP.nodes[num];
-    Plane plane = myBSP.planes[node.planeNum];
+    BSPNode node = cm.nodes[num];
+    Plane plane = cm.planes[node.planeNum];
   
     // adjust the plane distance apropriately for mins/maxs
     if ( plane.type < 3 ) {
@@ -427,8 +427,8 @@ class BSPTree {
     // TODO: if( tw.sphere.use)
     
     for (int i = 0; i < brush.numSides; i++) {
-      Brushside side = myBSP.brushSides[brush.firstSide + i];
-      Plane plane = myBSP.planes[side.planeNum];
+      Brushside side = cm.brushSides[brush.firstSide + i];
+      Plane plane = cm.planes[side.planeNum];
 
       // adjust the plane distance apropriately for mins/maxs
       dist = plane.dist - tw.offsets[plane.signbits].dot(plane.normal);
@@ -476,7 +476,7 @@ class BSPTree {
       if (!getout) {
         tw.trace.allSolid = true;
         tw.trace.fraction = 0.0;
-        tw.trace.contents = myBSP.shaders[brush.shaderNum].contentFlags;
+        tw.trace.contents = cm.shaders[brush.shaderNum].contentFlags;
       }
       return;
     }
@@ -487,8 +487,8 @@ class BSPTree {
           enterFrac = 0.0;
         tw.trace.fraction = enterFrac;
         tw.trace.plane = clipplane;
-        tw.trace.surfaceFlags = myBSP.shaders[leadside.shaderNum].surfaceFlags;
-        tw.trace.contents = myBSP.shaders[brush.shaderNum].contentFlags;
+        tw.trace.surfaceFlags = cm.shaders[leadside.shaderNum].surfaceFlags;
+        tw.trace.contents = cm.shaders[brush.shaderNum].contentFlags;
       }
     }
 
