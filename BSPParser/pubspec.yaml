@@ -1,0 +1,4 @@
+name: BSPParser
+description: A Quake3 BSP file parser
+#dependencies:
+#  unittest: any
