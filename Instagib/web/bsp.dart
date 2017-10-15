@@ -2,6 +2,26 @@ part of instagib;
 
 double q3bsptree_trace_offset = 0.03125;
 
+class MyBSP {
+  var entities;
+  List<Shader> shaders;
+  List<Plane> planes;
+  List<BSPNode> nodes;
+  List<Leaf> leafs;
+  var leafSurfaces;
+  Int32List leafBrushes;
+  var models;
+  List<Brush> brushes;
+  List<Brushside> brushSides;
+  List<Vertex> drawVerts;
+  List<int> drawIndexes;
+  var fogs;
+  List<Surface> surfaces;
+  var lightmaps;
+  var lghtGrid5;
+  var visibility;
+}
+
 class BSPNode {
   int planeNum;
   List<int> children;
@@ -119,25 +139,70 @@ class Output {
   Plane plane;
 }
 
+class PatchPlane {
+  List<double> plane = new List<double>(4);
+  int   signbits;   // signx + (signy<<1) + (signz<<2), used as lookup during collision
+}
+class Facet {
+  int     surfacePlane;
+  int     numBorders;   // 3 or four + 6 axial bevels + 4 or 3 * 4 edge bevels
+  List<int> borderPlanes = new List<int>(4+6+16);
+  List<int> borderInward = new List<int>(4+6+16);
+  List<bool> borderNoAdjust = new List<bool>(4+6+16);
+}
+class PatchCollide {
+  List<Vector> bounds = new List<Vector>(2);
+  int numPlanes;      // surface planes plus edge planes
+  List<PatchPlane> planes;
+  int   numFacets;
+  List<Facet> facets;
+}
+class Patch {
+  int checkcount;       // to avoid repeated testings
+  int surfaceFlags;
+  int contents;
+  PatchCollide pc;
+}
+
 class BSPTree {
   
-  List<BSPNode> nodes;
-  List<Plane> planes;
-  List<Leaf> leaves;
-  List<Brush> brushes;
-  Int32List leafBrushes;
-  List<Shader> textures;
-  List<Brushside> brushSides;
-  List<Surface> surfaces;
+  MyBSP myBSP;
 
-  BSPTree( this.nodes, this.planes, this.leaves, this.brushes, this.leafBrushes, this.textures, this.brushSides, this.surfaces) {
+  BSPTree( this.myBSP) {
     
     //for ( int i = 0 ; i < count ; i++) {      generatePatchCollide( width, height, points );    }
     
+    List<Patch> patches = new List<Patch>();
+    
+    for (Surface surface in myBSP.surfaces) {
+      if (surface.surfaceType == Surface.patch) {
+        return;
+        int width = surface.patch_size[0];
+        int height = surface.patch_size[1];
+        int c = width * height;
+        assert ( c <= 1024 );// {          print( "ParseMesh: MAX_PATCH_VERTS" );        }
+        List<Vector> points = new List<Vector>();
+        for (int j = 0; j < c; c++) {
+          Vector v = new Vector();
+          //int i = surface.firstVert + indexes[surface.firstIndex + k];
+        }
+        Patch patch = new Patch();
+        patch.contents = myBSP.shaders[surface.shaderNum].contentFlags;
+        patch.surfaceFlags = myBSP.shaders[surface.shaderNum].surfaceFlags;
+        patch.pc = generatePatchCollide( width, height, points );
+        patches.add(patch);
+      }
+    }
+    
   }
   
-  void generatePatchCollide( width, height, points) {
+  PatchCollide generatePatchCollide( width, height, points) {
+    assert( width > 2 && height > 2);
+    assert( ((width&1)==1) && ((height & 1)==1) );
+    assert ( width <= 129 && height <= 129 );
     
+    PatchCollide pc = new PatchCollide();
+    return pc;
   }
   
   
@@ -158,11 +223,11 @@ class BSPTree {
 
   void traceNode( int nodeIdx, double startFraction, double endFraction, Vector start, Vector end, double radius, Output output) {
     if( nodeIdx < 0) { // Leaf node?
-      Leaf leaf = leaves[-(nodeIdx + 1)];
+      Leaf leaf = myBSP.leafs[-(nodeIdx + 1)];
       for( int i = 0; i < leaf.numLeafBrushes; i++) {
-        Brush brush = brushes[leafBrushes[leaf.firstLeafBrush + i]];
-        var texture = textures[brush.shaderNum];
-        if( brush.numSides > 0 && ((texture.contentFlags & 1) == 1)) {
+        Brush brush = myBSP.brushes[myBSP.leafBrushes[leaf.firstLeafBrush + i]];
+        Shader shader = myBSP.shaders[brush.shaderNum];
+        if( brush.numSides > 0 && ((shader.contentFlags & 1) == 1)) {
           this.traceBrush( brush, start, end, radius, output);
         }
       }
@@ -170,8 +235,8 @@ class BSPTree {
     }
     
     // Tree node
-    BSPNode node = nodes[nodeIdx];
-    Plane plane = planes[node.planeNum];
+    BSPNode node = myBSP.nodes[nodeIdx];
+    Plane plane = myBSP.planes[node.planeNum];
     
     double startDist = plane.normal.dot(start) - plane.dist;
     double endDist = plane.normal.dot(end) - plane.dist;
@@ -232,8 +297,8 @@ class BSPTree {
     Plane collisionPlane = null;
     
     for (int i = 0; i < brush.numSides; i++) {
-        Brushside brushSide = brushSides[brush.firstSide + i];
-        Plane plane = planes[brushSide.planeNum];
+        Brushside brushSide = myBSP.brushSides[brush.firstSide + i];
+        Plane plane = myBSP.planes[brushSide.planeNum];
         
         double startDist = start.dot(plane.normal ) - (plane.dist + radius);
         double endDist = end.dot(plane.normal ) - (plane.dist + radius);

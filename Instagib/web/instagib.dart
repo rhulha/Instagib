@@ -57,29 +57,32 @@ void main() {
     utils.addSkybox( "textures/skybox_", ".png", "nx", "px", "nz", "pz", "ny", "py");
     
     chronosGL.getUtils().loadBinaryFile("data/q3dm17.bsp").then((ByteBuffer bspFile){
-      
+      MyBSP myBSP = new MyBSP();
       BSPParser parser = new BSPParser(bspFile);
       
-      List<Shader> shaders = parser.getShaders();
-      List<Surface> surfaces = parser.getSurfaces();
-      List<Vertex> vertexes = parser.getDrawVerts();
-      List<int> indexes = parser.getDrawIndexes();
+      myBSP.shaders = parser.getShaders();
+      myBSP.surfaces = parser.getSurfaces();
+      myBSP.drawVerts = parser.getDrawVerts();
+      myBSP.drawIndexes = parser.getDrawIndexes();
 
-      for (Surface surface in surfaces) {
+      
+      List<Surface> surfacesUntessellated = new List<Surface>.generate(myBSP.surfaces.length, (int idx)=>new Surface.copy(myBSP.surfaces[idx]));
+      
+      for (Surface surface in myBSP.surfaces) {
         if (surface.surfaceType == Surface.patch) {
           //print("tessellate");
-          tessellate(surface, vertexes, indexes, 20);
+          tessellate(surface, myBSP.drawVerts, myBSP.drawIndexes, 20);
         }
       }
 
-      changeColors(surfaces, indexes, shaders, vertexes);
+      changeColors(myBSP.surfaces, myBSP.drawIndexes, myBSP.shaders, myBSP.drawVerts);
       
       List<double> vertsList = new List<double>();
       List<double> normalsList = new List<double>();
       List<double> texCoordsList = new List<double>();
       List<double> lmCoordsList = new List<double>();
       List<double> colorsList = new List<double>();
-      for (Vertex vertex in vertexes) {
+      for (Vertex vertex in myBSP.drawVerts) {
         vertsList.addAll(vertex.xyz);
         normalsList.addAll(vertex.normal);
         texCoordsList.add(vertex.st[0]);
@@ -90,21 +93,21 @@ void main() {
       }
 
 
-      List<int> indicesList = removeUnneededObjects(surfaces, shaders, indexes);
+      List<int> indicesList = removeUnneededObjects(myBSP.surfaces, myBSP.shaders, myBSP.drawIndexes);
 
       Uint16List  xs = new Uint16List.fromList(indicesList);
       Float32List vs = new Float32List.fromList(vertsList);
       Float32List ns = new Float32List.fromList(normalsList);
       Float32List cs = new Float32List.fromList(colorsList);
 
-      List<BSPNode> nodes = BSPNode.parse(parser.getLump(LumpTypes.Nodes));
-      List<Plane> planes = Plane.parse(parser.getLump(LumpTypes.Planes));
-      List<Leaf> leafs = Leaf.parse(parser.getLump(LumpTypes.Leafs)); // TODO: rename
-      List<Brush> brushes = Brush.parse(parser.getLump(LumpTypes.Brushes));
-      Int32List leafBrushes = parser.getLump(LumpTypes.LeafBrushes).readAllSignedInts();
-      List<Brushside> brushSides = Brushside.parse(parser.getLump(LumpTypes.BrushSides));
+      myBSP.nodes = BSPNode.parse(parser.getLump(LumpTypes.Nodes));
+      myBSP.planes = Plane.parse(parser.getLump(LumpTypes.Planes));
+      myBSP.leafs = Leaf.parse(parser.getLump(LumpTypes.Leafs)); // TODO: rename
+      myBSP.brushes = Brush.parse(parser.getLump(LumpTypes.Brushes));
+      myBSP.leafBrushes = parser.getLump(LumpTypes.LeafBrushes).readAllSignedInts();
+      myBSP.brushSides = Brushside.parse(parser.getLump(LumpTypes.BrushSides));
 
-      BSPTree bspTree = new BSPTree(nodes, planes, leafs, brushes, leafBrushes, shaders, brushSides, surfaces);
+      BSPTree bspTree = new BSPTree(myBSP);
       fpscam.setBSPTree( bspTree);
       
       for( var a =0; a<vs.length ;a++) {

@@ -38,5 +38,21 @@ class Surface {
     this.lightmapVecs = br.readFloat(9);
     this.patch_size = br.readInt(2);
   }
+  Surface.copy(Surface s) {
+    this.shaderNum = s.shaderNum;
+    this.fogNum = s.fogNum;
+    this.surfaceType = s.surfaceType;
+    this.firstVert = s.firstVert;
+    this.numVerts = s.numVerts;
+    this.firstIndex = s.firstIndex;
+    this.numIndexes = s.numIndexes;
+    this.lightmapNum = s.lightmapNum;
+    this.lm_start = s.lm_start;
+    this.lm_size = s.lm_size;
+    this.lightmapOrigin = s.lightmapOrigin;
+    this.lightmapVecs = s.lightmapVecs;
+    this.patch_size = s.patch_size;
+    
+  }
 
 }
