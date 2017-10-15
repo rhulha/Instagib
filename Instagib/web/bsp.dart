@@ -21,7 +21,7 @@ class Plane {
   double distance;
   Plane.init( this.normal, this.distance);
   Plane( Float32List data) {
-    normal = new Vector.fromList(data.sublist(0, 3));
+    normal = new Vector.useList(data.sublist(0, 3));
     distance = data[3];
   }
 

@@ -39,7 +39,7 @@ class QuakeCamera extends Animatable
 
   BSPTree _bsp;
   
-  Vector up = new Vector(0.0,0.0,1.0);
+  Vector qup = new Vector(0.0,0.0,1.0);
   
   int movementX=0;
   int movementY=0;
@@ -91,18 +91,18 @@ class QuakeCamera extends Animatable
     dir.z=0.0; // don't move up or down 
     
     position.set( camera.getPos()).scale(100);
-    move( dir, 50.0/3.0);
-    
+
     if( cpk[Key.SPACE] != null) {
       jump();
     }
-
+    
+    move( dir, 50.0/3.0);
     camera.setPosFromVec( position.scale(0.01));
     
     if( movementY!=0)
       camera.matrix.rotate( movementY*0.006, camera.getRight());
     if( movementX!=0)
-      camera.matrix.rotate( movementX*0.006, up);
+      camera.matrix.rotate( movementX*0.006, qup);
     
     movementX=0;
     movementY=0;
@@ -271,11 +271,12 @@ class QuakeCamera extends Animatable
 
     // never turn against the ground plane
     if ( groundTrace != null && groundTrace.plane != null ) {
-        planes.add(new Vector().set(groundTrace.plane.normal)); // TODO: use tmp ?
+        //planes.add(new Vector().set(groundTrace.plane.normal)); // TODO: use tmp ?
+      planes.add(groundTrace.plane.normal);
     }
 
     // never turn against original velocity
-    planes.add(new Vector().set(velocity).normalize());
+    planes.add(velocity.copy().normalize());
 
     double time_left = q3movement_frameTime;
     Vector end = new Vector();
@@ -377,6 +378,7 @@ class QuakeCamera extends Animatable
   Vector down_o = new Vector();
   Vector down_v = new Vector();
 
+  Vector up = new Vector(0.0,0.0,1.0);
   Vector down = new Vector();
   
   void stepSlideMove( bool gravity) {
@@ -389,7 +391,7 @@ class QuakeCamera extends Animatable
     down[2] -= q3movement_stepsize;
     Output trace = _bsp.trace( start_o, down, q3movement_playerRadius);
     
-    Vector up = new Vector(0.0,0.0,1.0); // TODO: use tmp, don't collide with top up var
+    up.set(qup);  
     
     // never step up when you still have up velocity
     if ( velocity[2] > 0 && (trace.fraction == 1.0 || trace.plane.normal.dot( up) < 0.7)) { return; }

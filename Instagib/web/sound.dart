@@ -10,10 +10,14 @@ import "dart:web_audio";
 class Sound
 {
   AudioContext context;
+  GainNode gainNode;
   Map<String, AudioBuffer> sounds = new Map<String, AudioBuffer>(); 
 
-  Sound() {
+  Sound( [double volume=0.25]) {
     context = new AudioContext();
+    gainNode = context.createGainNode();
+    gainNode.gain.value = volume;
+    gainNode.connectNode(context.destination);
   }
   
   // "sounds/laser.wav"
@@ -41,7 +45,7 @@ class Sound
       return;
     AudioBufferSourceNode source = context.createBufferSource();
     source.buffer = sounds[alias];
-    source.connectNode(context.destination, 0, 0);
+    source.connectNode(gainNode);
     source.start(0);
   }
   
