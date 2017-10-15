@@ -10,7 +10,7 @@ import 'loader/BSPParser.dart';
 
 part 'structs/helper.dart';
 part 'q3dm17.dart';
-part 'bsp.dart';
+part 'trace.dart';
 part 'QuakeCamera.dart';
 part 'instagib_shader.dart';
 part 'laser.dart';
