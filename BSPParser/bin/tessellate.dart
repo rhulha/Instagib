@@ -2,7 +2,10 @@ part of bspparser;
 
 Vector getCurvePoint3(Vector c0, Vector c1, Vector c2, double dist) {
   double b = 1.0 - dist;
-  return c0.scale(b * b).add(c1.scale(2 * b * dist)).add(c2.scale(dist * dist));
+  Vector v0 = new Vector.fromList(c0.array);
+  Vector v1 = new Vector.fromList(c1.array);
+  Vector v2 = new Vector.fromList(c2.array);
+  return v0.scale(b * b).add(v1.scale(2 * b * dist)).add(v2.scale(dist * dist));
 }
 
 Vector getCurvePoint2(Vector c0, Vector c1, Vector c2, double dist) {

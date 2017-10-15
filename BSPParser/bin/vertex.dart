@@ -6,7 +6,7 @@ class Vertex {
   Float32List st; // Vertex texture coordinates.
   Float32List lightmap; // Vertex lightmap coordinates.
   Float32List normal; // Vertex normal.
-  Uint8List color; // Vertex color. RGBA.
+  Float32List color; // Vertex color. RGBA.  --  1.0 is max value
 
   static const int size = 44;
 
@@ -17,11 +17,7 @@ class Vertex {
     this.st = st.array;
     this.lightmap = lightmap.array;
     this.normal = normal.array;
-    this.color = new Uint8List(3);
-    this.color[0] = color.x.toInt();
-    this.color[1] = color.y.toInt();
-    this.color[2] = color.z.toInt();
-    
+    this.color = color.array;
   }
 
   Vertex(BinaryReader br) {
@@ -29,7 +25,13 @@ class Vertex {
     this.st = br.readFloat(2);
     this.lightmap = br.readFloat(2);
     this.normal = br.readFloat(3);
-    this.color = br.readBytes(4);
+
+    this.color = new Float32List(3);
+    Uint8List c = br.readBytes(4);
+    
+    this.color[0] = c[0]/255.0;
+    this.color[1] = c[1]/255.0;
+    this.color[2] = c[2]/255.0;
   }
   
   Vector xyzV(){

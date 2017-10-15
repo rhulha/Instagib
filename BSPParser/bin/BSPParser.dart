@@ -9,6 +9,7 @@ part 'vertex.dart';
 part 'surface.dart';
 part 'vector.dart';
 part 'tessellate.dart';
+part 'shader.dart';
 
 abstract class LumpTypes {
   static final int Entities = 0;
@@ -62,9 +63,7 @@ class BSPParser {
   }
 
   List<Surface> getSurfaces() {
-
     BinaryReader br = new BinaryReader(getLump(LumpTypes.Surfaces).buffer);
-
     List<Surface> surfaces = new List<Surface>(br.length() ~/ Surface.size);
     for (int i = 0; i < surfaces.length; i++) {
       surfaces[i] = new Surface(br);
@@ -75,46 +74,36 @@ class BSPParser {
   List<Vertex> getDrawVerts() {
     BinaryReader br = new BinaryReader(getLump(LumpTypes.DrawVerts).buffer);
     int length = br.length() ~/ Vertex.size;
-    List<Vertex> vertexes = new List<Vertex>(length);
+    List<Vertex> vertexes = new List<Vertex>(); // don't set fixed length so this list can grow
     for (int i = 0; i < length; i++) {
-      vertexes.add(new Vertex(br));
+      vertexes.add( new Vertex(br));
     }
     return vertexes;
   }
   
   List<int> getDrawIndexes() {
     BinaryReader br = new BinaryReader(getLump(LumpTypes.DrawIndexes).buffer);
-    List<int> drawIndexes = new List<int>();
     int length = br.length() ~/ 4;
+    List<int> drawIndexes = new List<int>(); // don't set fixed length so this list can grow
     for (int i = 0; i < length; i++) {
       drawIndexes.add( br.readOneInt());
     }
     return drawIndexes;
   }
-}
+  
+  getShaders() {
+    BinaryReader br = new BinaryReader(getLump(LumpTypes.Shaders).buffer);
 
-
-void main() {
-
-  BSPParser bsp = new BSPParser('q3dm17.bsp');
-
-  new File("q3dm17.brushes").writeAsBytesSync(bsp.getLump(LumpTypes.Brushes));
-  new File("q3dm17.brushsides").writeAsBytesSync(bsp.getLump(LumpTypes.BrushSides));
-  new File("q3dm17.leafbrushes").writeAsBytesSync(bsp.getLump(LumpTypes.LeafBrushes));
-  new File("q3dm17.leafs").writeAsBytesSync(bsp.getLump(LumpTypes.Leafs));
-  new File("q3dm17.nodes").writeAsBytesSync(bsp.getLump(LumpTypes.Nodes));
-  new File("q3dm17.planes").writeAsBytesSync(bsp.getLump(LumpTypes.Planes));
-
-  List<Surface> surfaces = bsp.getSurfaces();
-
-  List<Vertex> vertexes = bsp.getDrawVerts();
-  List<int> indexes = bsp.getDrawIndexes();
-
-
-  for (Surface surface in surfaces) {
-    if (surface.surfaceType == Surface.patch) {
-      print("tessellate");
-      tessellate(surface, vertexes, indexes, 10);
+    List<Shader> shaders = new List<Shader>(br.length() ~/ Shader.size);
+    for (int i = 0; i < shaders.length; i++) {
+      String name = br.readString(64);
+      if( name.indexOf("\x00") >= 0) {
+        name = name.substring(0, name.indexOf("\x00"));
+      }
+      shaders[i] = new Shader( name, br.readOneInt(), br.readOneInt());
     }
+    return shaders;
   }
 }
+
+
