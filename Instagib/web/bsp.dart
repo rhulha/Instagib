@@ -1,7 +1,7 @@
 part of instagib;
 
 double q3bsptree_trace_offset = 0.03125;
-
+final Vector ORIGIN = new Vector(0.0,0.0,0.0);
 
 class Trace {
   bool allSolid = false;
@@ -81,12 +81,23 @@ class BSPTree {
   }
 
   TraceWork tw = new TraceWork();
-  Trace trace(Vector start, Vector end, double radius) {
+  
+  Trace trace(Vector start, Vector end, {Vector mins, Vector maxs, int modelClipHandle:0, Vector origin, int brushmask:0, int capsule:0} /*, Sphere sphere*/) {
+    if(mins==null) {
+      mins = ORIGIN;
+    }
+    if(maxs==null) {
+      maxs = ORIGIN;
+    }
+    if(origin==null) {
+      origin = ORIGIN;
+    }
+    
     tw.reset();
 
     tw.trace.endPos.set(end);
 
-    traceThroughTree(tw, 0, 0.0, 1.0, start, end, radius);
+    traceThroughTree(tw, 0, 0.0, 1.0, start, end);
 
     if (tw.trace.fraction != 1.0) { // collided with something
       for (int i = 0; i < 3; i++) {
@@ -97,8 +108,7 @@ class BSPTree {
     return tw.trace;
   }
 
-  void traceThroughLeaf(TraceWork tw, int nodeIdx, Vector start, Vector end, double radius) {
-    Leaf leaf = myBSP.leafs[-(nodeIdx + 1)];
+  void traceThroughLeaf(TraceWork tw, Leaf leaf) {
     for (int i = 0; i < leaf.numLeafBrushes; i++) {
       Brush brush = myBSP.brushes[myBSP.leafBrushes[leaf.firstLeafBrush + i]];
       Shader shader = myBSP.shaders[brush.shaderNum];
@@ -302,63 +312,101 @@ class BSPTree {
     return true;
   }
 
-  void traceThroughTree(TraceWork tw, int nodeIdx, double startFraction, double endFraction, Vector start, Vector end, double radius) {
-    if (nodeIdx < 0) { // Leaf node?
-      traceThroughLeaf(tw, nodeIdx, start, end, radius);
+  /*
+  ==================
+  CM_TraceThroughTree
+
+  Traverse all the contacted leafs from the start to the end position.
+  If the trace is a point, they will be exactly in order, but for larger
+  trace volumes it is possible to hit something in a later leaf with
+  a smaller intercept fraction.
+  ==================
+  */
+  void traceThroughTree(TraceWork tw, int num, double p1f, double p2f, Vector p1, Vector p2) {
+    double offset;
+    double frac, frac2, idist;
+    Vector mid = new Vector();
+    int side;
+    double midf;
+
+    if (tw.trace.fraction <= p1f) {
+      return; // already hit something nearer
+    }
+    
+    // if < 0, we are in a leaf node
+    if (num < 0) {
+      traceThroughLeaf(tw, myBSP.leafs[-1-num]);
       return;
     }
 
-    // Tree node
-    BSPNode node = myBSP.nodes[nodeIdx];
+    // find the point distances to the seperating plane
+    // and the offset for the size of the box
+
+    BSPNode node = myBSP.nodes[num];
     Plane plane = myBSP.planes[node.planeNum];
+  
+// adjust the plane distance apropriately for mins/maxs
 
-    double startDist = plane.normal.dot(start) - plane.dist;
-    double endDist = plane.normal.dot(end) - plane.dist;
-
-    if (startDist >= radius && endDist >= radius) {
-      this.traceThroughTree(tw, node.children[0], startFraction, endFraction, start, end, radius);
-    } else if (startDist < -radius && endDist < -radius) {
-      this.traceThroughTree(tw, node.children[1], startFraction, endFraction, start, end, radius);
+    // TODO: if ( plane->type < 3 ) {...}
+    double t1 = plane.normal.dot(p1) - plane.dist;
+    double t2 = plane.normal.dot(p2) - plane.dist;
+    if(tw.isPoint) {
+      offset=0.0;
     } else {
-      int side;
-      double fraction1, fraction2, middleFraction;
-      Vector middle = new Vector();
-
-      if (startDist < endDist) {
-        side = 1; // back
-        double iDist = 1 / (startDist - endDist);
-        fraction1 = (startDist - radius + q3bsptree_trace_offset) * iDist;
-        fraction2 = (startDist + radius + q3bsptree_trace_offset) * iDist;
-      } else if (startDist > endDist) {
-        side = 0; // front
-        double iDist = 1 / (startDist - endDist);
-        fraction1 = (startDist + radius + q3bsptree_trace_offset) * iDist;
-        fraction2 = (startDist - radius - q3bsptree_trace_offset) * iDist;
-      } else {
-        side = 0; // front
-        fraction1 = 1.0;
-        fraction2 = 0.0;
-      }
-
-      if (fraction1 < 0) fraction1 = 0.0; else if (fraction1 > 1) fraction1 = 1.0;
-      if (fraction2 < 0) fraction2 = 0.0; else if (fraction2 > 1) fraction2 = 1.0;
-
-      middleFraction = startFraction + (endFraction - startFraction) * fraction1;
-
-      for (int i = 0; i < 3; i++) {
-        middle[i] = start[i] + fraction1 * (end[i] - start[i]);
-      }
-
-      traceThroughTree(tw, node.children[side], startFraction, middleFraction, start, middle, radius);
-
-      middleFraction = startFraction + (endFraction - startFraction) * fraction2;
-
-      for (int i = 0; i < 3; i++) {
-        middle[i] = start[i] + fraction2 * (end[i] - start[i]);
-      }
-
-      traceThroughTree(tw, node.children[side == 0 ? 1 : 0], middleFraction, endFraction, middle, end, radius);
+      offset=2048.0; // this is silly
     }
+
+    if (t1 >= offset + 1 && t2 >= offset + 1) {
+      traceThroughTree(tw, node.children[0], p1f, p2f, p1, p2);
+      return;
+    } else if (t1 < -offset-1 && t2 < -offset-1) {
+      traceThroughTree(tw, node.children[1], p1f, p2f, p1, p2);
+      return;
+    }
+    
+    // put the crosspoint SURFACE_CLIP_EPSILON pixels on the near side
+    if (t1 < t2) {
+      idist = 1.0/(t1-t2);
+      side = 1; // back
+      frac2 = (t1 + offset + SURFACE_CLIP_EPSILON) * idist;
+      frac = (t1 - offset + SURFACE_CLIP_EPSILON) * idist;
+    } else if (t1 > t2) {
+      idist = 1.0/(t1-t2);
+      side = 0; // front
+      frac2 = (t1 - offset - SURFACE_CLIP_EPSILON) * idist;
+      frac = (t1 + offset + SURFACE_CLIP_EPSILON) * idist;
+    } else {
+      side = 0; // front
+      frac = 1.0;
+      frac2 = 0.0;
+    }
+
+    // move up to the node
+    if (frac < 0)
+      frac = 0.0;
+    else if (frac > 1)
+      frac = 1.0;
+    
+    midf = p1f + (p2f - p1f)*frac;
+
+    for (int i = 0; i < 3; i++) {
+      mid[i] = p1[i] + frac * (p2[i] - p1[i]);
+    }
+
+    traceThroughTree(tw, node.children[side], p1f, midf, p1, mid);
+
+    if (frac2 < 0)
+      frac2 = 0.0;
+    else if (frac2 > 1)
+      frac2 = 1.0;
+
+    midf = p1f + (p2f - p1f)*frac2;
+
+    for (int i = 0; i < 3; i++) {
+      mid[i] = p1[i] + frac2 * (p2[i] - p1[i]);
+    }
+
+    traceThroughTree(tw, node.children[side == 0 ? 1 : 0], midf, p2f, mid, p2);
   }
 
   void traceThroughBrush(TraceWork tw, Brush brush) {
@@ -367,6 +415,8 @@ class BSPTree {
     bool startsOut = false;
     bool endsOut = false;
     Plane clipplane = null;
+    
+    Brushside leadside;
 
     for (int i = 0; i < brush.numSides; i++) {
       Brushside brushSide = myBSP.brushSides[brush.firstSide + i];
