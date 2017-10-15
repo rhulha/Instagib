@@ -90,31 +90,7 @@ void main() {
       }
 
 
-      List<String> skip = new List<String>();
-      skip.add("flareShader");
-      skip.add("textures/skies/blacksky");
-      skip.add("textures/sfx/beam");
-      skip.add("models/mapobjects/spotlamp/beam");
-      skip.add("models/mapobjects/lamps/flare03");
-      skip.add("models/mapobjects/teleporter/energy"); // TODO readd and make blue ?
-      skip.add("models/mapobjects/spotlamp/spotlamp");
-      skip.add("models/mapobjects/spotlamp/spotlamp_l");
-      skip.add("models/mapobjects/lamps/bot_lamp"); // head on the railgun pad
-      skip.add("models/mapobjects/lamps/bot_lamp2");
-      skip.add("models/mapobjects/lamps/bot_flare");
-      skip.add("models/mapobjects/lamps/bot_flare2");
-      skip.add("models/mapobjects/lamps/bot_wing");
-      //skip.add("models/mapobjects/kmlamp1"); // stand lights
-      //skip.add("models/mapobjects/kmlamp_white");
-
-      List<int> indicesList = new List<int>();
-      for (Surface surface in surfaces) {
-        if (skip.contains(shaders[surface.shaderNum].shader)) continue;
-        for (int k = 0; k < surface.numIndexes; ++k) {
-          int i = surface.firstVert + indexes[surface.firstIndex + k];
-          indicesList.add(i);
-        }
-      }
+      List<int> indicesList = removeUnneededObjects(surfaces, shaders, indexes);
 
       Uint16List  xs = new Uint16List.fromList(indicesList);
       Float32List vs = new Float32List.fromList(vertsList);
@@ -123,12 +99,12 @@ void main() {
 
       List<BSPNode> nodes = BSPNode.parse(parser.getLump(LumpTypes.Nodes));
       List<Plane> planes = Plane.parse(parser.getLump(LumpTypes.Planes));
-      List<Leaf> leaves = Leaf.parse(parser.getLump(LumpTypes.Leafs)); // TODO: rename
+      List<Leaf> leafs = Leaf.parse(parser.getLump(LumpTypes.Leafs)); // TODO: rename
       List<Brush> brushes = Brush.parse(parser.getLump(LumpTypes.Brushes));
       Int32List leafBrushes = parser.getLump(LumpTypes.LeafBrushes).readAllSignedInts();
       List<Brushside> brushSides = Brushside.parse(parser.getLump(LumpTypes.BrushSides));
 
-      BSPTree bspTree = new BSPTree(nodes, planes, leaves, brushes, leafBrushes, shaders, brushSides, surfaces);
+      BSPTree bspTree = new BSPTree(nodes, planes, leafs, brushes, leafBrushes, shaders, brushSides, surfaces);
       fpscam.setBSPTree( bspTree);
       
       for( var a =0; a<vs.length ;a++) {
@@ -143,4 +119,5 @@ void main() {
   
  
 }
+
 

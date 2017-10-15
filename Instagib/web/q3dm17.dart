@@ -1,5 +1,34 @@
 part of instagib;
 
+List<int> removeUnneededObjects(List<Surface> surfaces, List<Shader> shaders, List<int> indexes) {
+  List<String> skip = new List<String>();
+  skip.add("flareShader");
+  skip.add("textures/skies/blacksky");
+  skip.add("textures/sfx/beam");
+  skip.add("models/mapobjects/spotlamp/beam");
+  skip.add("models/mapobjects/lamps/flare03");
+  skip.add("models/mapobjects/teleporter/energy"); // TODO readd and make blue ?
+  skip.add("models/mapobjects/spotlamp/spotlamp");
+  skip.add("models/mapobjects/spotlamp/spotlamp_l");
+  skip.add("models/mapobjects/lamps/bot_lamp"); // head on the railgun pad
+  skip.add("models/mapobjects/lamps/bot_lamp2");
+  skip.add("models/mapobjects/lamps/bot_flare");
+  skip.add("models/mapobjects/lamps/bot_flare2");
+  skip.add("models/mapobjects/lamps/bot_wing");
+  //skip.add("models/mapobjects/kmlamp1"); // stand lights
+  //skip.add("models/mapobjects/kmlamp_white");
+  
+  List<int> indicesList = new List<int>();
+  for (Surface surface in surfaces) {
+    if (skip.contains(shaders[surface.shaderNum].shader)) continue;
+    for (int k = 0; k < surface.numIndexes; ++k) {
+      int i = surface.firstVert + indexes[surface.firstIndex + k];
+      indicesList.add(i);
+    }
+  }
+  return indicesList;
+}
+
 void changeColors(List<Surface> surfaces, List<int> indexes, List<Shader> shaders, List<Vertex> vertexes) {
   List<String> blue = new List<String>();
   blue.add("textures/base_wall/c_met5_2");
