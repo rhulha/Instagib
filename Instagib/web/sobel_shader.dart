@@ -82,7 +82,7 @@ ShaderObject getSobelShader() {
 
     if( true )
     {
-      float len_d = 0.0; sobel_d(depthSampler);
+      float len_d = 0.0; //sobel_d(depthSampler);
       float len_c = sobel_c(colorSampler);
       float len = len_d + len_c;
       if( len > 1.0 ) len = 1.0;
@@ -93,7 +93,7 @@ ShaderObject getSobelShader() {
         len = 1.0 - len;
         gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
       } else {
-        gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0); texture2D(colorSampler, vTextureCoord);
+        gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0); // texture2D(colorSampler, vTextureCoord);
       }
 
         gl_FragColor = vec4(0, len, len, 1.0);
