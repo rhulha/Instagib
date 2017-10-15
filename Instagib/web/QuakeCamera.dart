@@ -86,10 +86,9 @@ class QuakeCamera extends Animatable
     position.set( camera.getPos()).scale(100);
     move( dir, 50.0/3.0);
     camera.setPosFromVec( position.scale(0.01));
-    //traceStart.scale(100); // we draw the map 100 times smaller
-    //traceEnd.scale(100); // TODO:
     
     if( cpk[Key.SPACE] != null) {
+      jump();
     }
     
     if( movementY!=0)
@@ -130,6 +129,7 @@ class QuakeCamera extends Animatable
     groundTrace = _bsp.trace( position, checkPoint, q3movement_playerRadius);
     
     if( groundTrace.fraction == 1.0) { // falling
+        HTML.querySelector("#info").text = 'falling: ' + position.toString();
         onGround = false;
         return;
     }
@@ -202,13 +202,16 @@ class QuakeCamera extends Animatable
   Vector move( Vector dir, double frameTime) {
     q3movement_frameTime = frameTime*0.0075;
     
+    HTML.querySelector("#info").text = 'onGround';
     groundCheck();
     
     dir.normalize();
     
     if( onGround) {
+      //HTML.querySelector("#info").text = 'onGround';
       walkMove( dir);
     } else {
+      //HTML.querySelector("#info").text = 'inAir';
       airMove( dir);
     }
     
@@ -357,7 +360,7 @@ class QuakeCamera extends Animatable
       velocity.set( endVelocity);
     }
 
-    return ( bumpcount != 0 );
+    return bumpcount != 0;
   }
 
   Vector start_o = new Vector();

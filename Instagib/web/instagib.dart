@@ -84,7 +84,7 @@ void main() {
       var textures = list[7];
       
       Int32List brushSides = new Int32List.view( list[8]);
-      List<Brushside> brushSides2 = new List<Brushside>(brushes.length~/2);
+      List<Brushside> brushSides2 = new List<Brushside>(brushSides.length~/2);
       for( int i=0;i<brushSides2.length;i++) {
         brushSides2[i] = new Brushside(brushSides.sublist(i*2, i*2+2));
       }

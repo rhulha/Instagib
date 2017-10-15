@@ -92,14 +92,14 @@ class BSPTree {
   BSPTree( this.nodes, this.planes, this.leaves, this.brushes, this.leafBrushes, this.textures, this.brushSides);
   
   
-  Output trace( Vector start, Vector end, num radius) {
+  Output trace( Vector start, Vector end, double radius) {
     Output output = new Output(); // TODO: use tmp
     output.endPos.set( end);
     
-    traceNode(0, 0, 1, start, end, radius, output);
+    traceNode( 0, 0.0, 1.0, start, end, radius, output);
     
-    if(output.fraction != 1.0) { // collided with something
-        for (int i = 0; i < 3; i++) {
+    if( output.fraction != 1.0) { // collided with something
+        for( int i = 0; i < 3; i++) {
             output.endPos[i] = start[i] + output.fraction * (end[i] - start[i]);
         }
     }
@@ -107,7 +107,7 @@ class BSPTree {
     return output;
   }
 
-  void traceNode( int nodeIdx, num startFraction, num endFraction, Vector start, Vector end, num radius, Output output) {
+  void traceNode( int nodeIdx, double startFraction, double endFraction, Vector start, Vector end, double radius, Output output) {
     if( nodeIdx < 0) { // Leaf node?
       Leaf leaf = leaves[-(nodeIdx + 1)];
       for( int i = 0; i < leaf.n_leafbrushes; i++) {
@@ -183,8 +183,6 @@ class BSPTree {
     Plane collisionPlane = null;
     
     for (int i = 0; i < brush.n_brushsides; i++) {
-        if( brush.brushside + i > brushSides.length)
-          break;
         Brushside brushSide = brushSides[brush.brushside + i];
         Plane plane = planes[brushSide.plane];
         
