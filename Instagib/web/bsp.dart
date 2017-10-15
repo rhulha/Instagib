@@ -93,7 +93,8 @@ class BSPTree {
   
   
   Output trace( Vector start, Vector end, num radius) {
-    var output = new Output(); 
+    Output output = new Output(); // TODO: use tmp
+    output.endPos.set( end);
     
     traceNode(0, 0, 1, start, end, radius, output);
     
@@ -106,14 +107,14 @@ class BSPTree {
     return output;
   }
 
-  void traceNode(int nodeIdx, num startFraction, num endFraction, Vector start, Vector end, num radius, Output output) {
-    if (nodeIdx < 0) { // Leaf node?
+  void traceNode( int nodeIdx, num startFraction, num endFraction, Vector start, Vector end, num radius, Output output) {
+    if( nodeIdx < 0) { // Leaf node?
       Leaf leaf = leaves[-(nodeIdx + 1)];
-      for (int i = 0; i < leaf.n_leafbrushes; i++) {
+      for( int i = 0; i < leaf.n_leafbrushes; i++) {
         Brush brush = brushes[leafBrushes[leaf.leafbrush + i]];
         var texture = textures[brush.texture];
-        if (brush.n_brushsides > 0 && ((texture['contents'] & 1) == 1)) {
-          this.traceBrush(brush, start, end, radius, output);
+        if( brush.n_brushsides > 0 && ((texture['contents'] & 1) == 1)) {
+          this.traceBrush( brush, start, end, radius, output);
         }
       }
       return;

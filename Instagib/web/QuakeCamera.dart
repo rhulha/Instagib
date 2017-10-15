@@ -37,14 +37,14 @@ class QuakeCamera extends Animatable
 
   Vector tmp = new Vector();
 
-  BSPTree bsp;
+  BSPTree _bsp;
   
   Vector up = new Vector(0.0,0.0,1.0);
   
   int movementX=0;
   int movementY=0;
   
-  QuakeCamera( camera) {
+  QuakeCamera( this.camera) {
 
     HTML.document.onMouseDown.listen( (HTML.MouseEvent e) {
       e.preventDefault();
@@ -60,7 +60,7 @@ class QuakeCamera extends Animatable
   }
   
   void setBSPTree( BSPTree bsp) {
-    bsp = bsp;
+    _bsp = bsp;
   }
   
   void animate( double elapsed)
@@ -83,7 +83,9 @@ class QuakeCamera extends Animatable
       dir.add( camera.getRight() );
     }
     
+    position.set( camera.getPos()).scale(100);
     move( dir, 50.0/3.0);
+    camera.setPosFromVec( position.scale(0.01));
     //traceStart.scale(100); // we draw the map 100 times smaller
     //traceEnd.scale(100); // TODO:
     
@@ -125,7 +127,7 @@ class QuakeCamera extends Animatable
     checkPoint.y = position[1];
     checkPoint.z = position[2] - q3movement_playerRadius - 0.25;
     
-    groundTrace = bsp.trace( position, checkPoint, q3movement_playerRadius);
+    groundTrace = _bsp.trace( position, checkPoint, q3movement_playerRadius);
     
     if( groundTrace.fraction == 1.0) { // falling
         onGround = false;
@@ -268,11 +270,11 @@ class QuakeCamera extends Animatable
     for(bumpcount=0; bumpcount < numbumps; ++bumpcount) {
         
         // calculate position we are trying to move to
-      end.set(position);
+      end.set( position);
       end.add( new Vector().set(velocity).scale( time_left) ); // TODO: use tmp
         
         // see if we can make it there
-        Output trace = bsp.trace(position, end, q3movement_playerRadius);
+        Output trace = _bsp.trace( position, end, q3movement_playerRadius);
 
         if( trace.allSolid) {
             // entity is completely trapped in another solid
@@ -282,7 +284,7 @@ class QuakeCamera extends Animatable
 
         if( trace.fraction > 0) {
           // actually covered some distance
-          position.set(trace.endPos);
+          position.set( trace.endPos);
         }
 
         if( trace.fraction == 1.0) {
@@ -307,7 +309,7 @@ class QuakeCamera extends Animatable
             clipVelocity( endVelocity, planes[i], endClipVelocity);
 
             // see if there is a second plane that the new move enters
-            for (var j = 0; j < planes.length; j++) {
+            for( int j = 0; j < planes.length; j++) {
                 if ( j == i ) { continue; }
                 if ( clipVelocity_.dot( planes[j] ) >= 0.1 ) { continue; } // move doesn't interact with the plane
                 
@@ -366,16 +368,16 @@ class QuakeCamera extends Animatable
   Vector down = new Vector();
   
   void stepSlideMove( bool gravity) {
-    start_o.set(position);
-    start_v.set(velocity);
+    start_o.set( position);
+    start_v.set( velocity);
     
-    if ( slideMove( gravity ) == 0 ) { return; } // we got exactly where we wanted to go first try
+    if ( ! slideMove( gravity ) ) { return; } // we got exactly where we wanted to go first try
 
     down.set( start_o);
     down[2] -= q3movement_stepsize;
-    Output trace = bsp.trace( start_o, down, q3movement_playerRadius);
+    Output trace = _bsp.trace( start_o, down, q3movement_playerRadius);
     
-    Vector up = new Vector(0,0,1);
+    Vector up = new Vector(0.0,0.0,1.0); // TODO: use tmp, don't collide with top up var
     
     // never step up when you still have up velocity
     if ( velocity[2] > 0 && (trace.fraction == 1.0 || trace.plane.normal.dot( up) < 0.7)) { return; }
@@ -387,7 +389,7 @@ class QuakeCamera extends Animatable
     up[2] += q3movement_stepsize;
     
     // test the player position if they were a stepheight higher
-    trace = bsp.trace( start_o, up, q3movement_playerRadius); // TODO: pass in Output to avoid Object creation
+    trace = _bsp.trace( start_o, up, q3movement_playerRadius); // TODO: pass in Output to avoid Object creation
     if ( trace.allSolid ) { return; } // can't step up
     
     double stepSize = trace.endPos[2] - start_o[2];
@@ -400,7 +402,7 @@ class QuakeCamera extends Animatable
     // push down the final amount
     down.set(position );
     down[2] -= stepSize;
-    trace = bsp.trace( position, down, q3movement_playerRadius);
+    trace = _bsp.trace( position, down, q3movement_playerRadius);
     if ( !trace.allSolid) {
       position.set( trace.endPos);
     }
