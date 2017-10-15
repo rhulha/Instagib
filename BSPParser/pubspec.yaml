@@ -1,4 +1,6 @@
-name: BSPParser
+name: bspparser
 description: A Quake3 BSP file parser
-#dependencies:
+dependencies:
+  chronosgl:
+    path: C:\Users\Ray\dart\ChronosGL
 #  unittest: any

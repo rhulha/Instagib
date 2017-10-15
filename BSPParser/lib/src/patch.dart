@@ -1,4 +1,4 @@
-part of instagib;
+part of bspparser;
 
 const int EN_TOP = 0;
 const int EN_RIGHT = 1;

@@ -1,4 +1,4 @@
-part of instagib;
+part of bspparser;
 
 class Leaf {
   int cluster;

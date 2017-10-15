@@ -1,13 +1,23 @@
 library bspparser;
 
 import 'dart:typed_data';
+import 'dart:math' as Math;
 import 'package:chronosgl/chronosgl.dart';
 
-part 'binary_reader.dart';
-part '../structs/vertex.dart';
-part '../structs/surface.dart';
-part 'tessellate.dart';
-part '../structs/shader.dart';
+part 'src/binary_reader.dart';
+part 'src/vertex.dart';
+part 'src/surface.dart';
+part 'src/tessellate.dart';
+part 'src/shader.dart';
+part 'src/brush.dart';
+part 'src/brushside.dart';
+part 'src/bsp_node.dart';
+part 'src/helper.dart';
+part 'src/leaf.dart';
+part 'src/patch.dart';
+part 'src/plane.dart';
+
+part 'src/clipmap.dart';
 
 abstract class LumpTypes {
   static final int Entities = 0;
