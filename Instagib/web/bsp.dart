@@ -35,7 +35,7 @@ class BSPTree {
     Output output = new Output(); // TODO: use tmp
     output.endPos.set( end);
     
-    traceNode( 0, 0.0, 1.0, start, end, radius, output);
+    traceThroughTree( 0, 0.0, 1.0, start, end, radius, output);
     
     if( output.fraction != 1.0) { // collided with something
         for( int i = 0; i < 3; i++) {
@@ -46,14 +46,14 @@ class BSPTree {
     return output;
   }
 
-  void traceNode( int nodeIdx, double startFraction, double endFraction, Vector start, Vector end, double radius, Output output) {
+  void traceThroughTree( int nodeIdx, double startFraction, double endFraction, Vector start, Vector end, double radius, Output output) {
     if( nodeIdx < 0) { // Leaf node?
       Leaf leaf = myBSP.leafs[-(nodeIdx + 1)];
       for( int i = 0; i < leaf.numLeafBrushes; i++) {
         Brush brush = myBSP.brushes[myBSP.leafBrushes[leaf.firstLeafBrush + i]];
         Shader shader = myBSP.shaders[brush.shaderNum];
         if( brush.numSides > 0 && ((shader.contentFlags & 1) == 1)) {
-          this.traceBrush( brush, start, end, radius, output);
+          this.traceThroughBrush( brush, start, end, radius, output);
         }
       }
       return;
@@ -67,9 +67,9 @@ class BSPTree {
     double endDist = plane.normal.dot(end) - plane.dist;
     
     if (startDist >= radius && endDist >= radius) {
-      this.traceNode(node.children[0], startFraction, endFraction, start, end, radius, output );
+      this.traceThroughTree(node.children[0], startFraction, endFraction, start, end, radius, output );
     } else if (startDist < -radius && endDist < -radius) {
-      this.traceNode(node.children[1], startFraction, endFraction, start, end, radius, output );
+      this.traceThroughTree(node.children[1], startFraction, endFraction, start, end, radius, output );
     } else {
       int side;
       double fraction1, fraction2, middleFraction;
@@ -102,7 +102,7 @@ class BSPTree {
         middle[i] = start[i] + fraction1 * (end[i] - start[i]);
       }
       
-      this.traceNode(node.children[side], startFraction, middleFraction, start, middle, radius, output );
+      this.traceThroughTree(node.children[side], startFraction, middleFraction, start, middle, radius, output );
       
       middleFraction = startFraction + (endFraction - startFraction) * fraction2;
       
@@ -110,11 +110,11 @@ class BSPTree {
         middle[i] = start[i] + fraction2 * (end[i] - start[i]);
       }
       
-      this.traceNode(node.children[side==0?1:0], middleFraction, endFraction, middle, end, radius, output );
+      this.traceThroughTree(node.children[side==0?1:0], middleFraction, endFraction, middle, end, radius, output );
     }
   }
 
-  void traceBrush( Brush brush, Vector start, Vector end, double radius, Output output) {
+  void traceThroughBrush( Brush brush, Vector start, Vector end, double radius, Output output) {
     double startFraction = -1.0;
     double endFraction = 1.0;
     bool startsOut = false;
