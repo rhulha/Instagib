@@ -10,7 +10,7 @@ import 'sound.dart';
 
 part 'bsp.dart';
 part 'QuakeCamera.dart';
-part 'sobel_shader.dart';
+part 'instagib_shader.dart';
 part 'laser.dart';
 part 'file_cache.dart';
 
@@ -24,10 +24,10 @@ void main() {
   skipDefaultMouseMoveListener = true;
   chronosGL = new ChronosGL('#webgl-canvas', useFramebuffer:false, fxShader: createSobelShader(), near: 0.1, far:2520.0);
 
-  //ShaderProgram sp = chronosGL.createProgram( createDebugTexCoordsShader());
-  //ShaderProgram sp = chronosGL.createProgram( createPlane2GreyShader());
-  ShaderProgram sp = chronosGL.createProgram( createInstagibShader());
-  //ShaderProgram sp = chronosGL.createProgram( createInstagibLightShader());
+  ShaderObject shaderObject = createColorShader();
+  // createDebugTexCoordsShader() createPlane2GreyShader()
+  // createInstagibShader() createInstagibLightShader()
+  ShaderProgram sp = chronosGL.createProgram( shaderObject);
 
   //chronosGL.getRenderingContext().enable( 0x0B44);//RenderingContext.CULL_FACE
   
@@ -59,7 +59,8 @@ void main() {
     bfc.addBinary('data/q3dm17.indices');
     bfc.addBinary('data/q3dm17.verts');
     bfc.addBinary('data/q3dm17.normals');
-    bfc.addBinary('data/q3dm17.texcoords');
+    bfc.addBinary('data/q3dm17.colors');
+    
     bfc.addBinary('data/q3dm17.nodes');
     bfc.addBinary('data/q3dm17.planes');
     bfc.addBinary('data/q3dm17.leafs');
@@ -73,7 +74,7 @@ void main() {
       Uint16List  xs = bfc.get('data/q3dm17.indices').asUint16List();
       Float32List vs = bfc.get('data/q3dm17.verts').asFloat32List();
       Float32List ns = bfc.get('data/q3dm17.normals').asFloat32List();
-      Float32List ts = bfc.get('data/q3dm17.texcoords').asFloat32List();
+      Float32List cs = bfc.get('data/q3dm17.colors').asFloat32List();
 
       List<BSPNode> nodes = BSPNode.parse(bfc.get('data/q3dm17.nodes').asInt32List());
       List<Plane> planes = Plane.parse(bfc.get('data/q3dm17.planes').asFloat32List());
@@ -90,7 +91,7 @@ void main() {
         vs[a] = vs[a] / 100;
       }
       
-      sp.add( new MeshData(vertices: vs, normals: ns, vertexIndices: xs, textureCoords: ts).createMesh());
+      sp.add( new MeshData(vertices: vs, normals: ns, vertexIndices: xs, colors: cs).createMesh());
       chronosGL.run();
     });
 
