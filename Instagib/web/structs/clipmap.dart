@@ -17,6 +17,8 @@ class ClipMap {
   List<Surface> surfaces;
   List<Surface> surfacesUntessellated;
   var lightmaps;
-  var lghtGrid5;
+  var lightGrid;
   var visibility;
+  
+  int checkcount=0;
 }

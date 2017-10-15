@@ -1,7 +1,7 @@
 part of instagib;
 
 double q3bsptree_trace_offset = 0.03125; // TODO: remove
-final Vector ORIGIN = new Vector(0.0,0.0,0.0);
+final Vector ORIGIN = new Vector(0.0, 0.0, 0.0);
 
 class Trace {
   bool allSolid = false;
@@ -81,25 +81,76 @@ class BSPTree {
   }
 
   TraceWork tw = new TraceWork();
-  
-  Trace trace(Vector start, Vector end, {Vector mins, Vector maxs, int modelClipHandle:0, Vector origin, int brushmask:0, int capsule:0} /*, Sphere sphere*/) {
-    if(mins==null) {
-      mins = ORIGIN;
-    }
-    if(maxs==null) {
-      maxs = ORIGIN;
-    }
-    if(origin==null) {
-      origin = ORIGIN;
-    }
-    
-    tw.reset();
 
-    tw.trace.endPos.set(end);
+  Trace simpleTrace(Vector start, Vector end, Vector mins, Vector maxs) {
+    return trace(start, end, mins: mins, maxs: maxs);
+  }
+
+  Trace trace(Vector start, Vector end, {Vector mins, Vector maxs, int modelClipHandle: 0, Vector origin, int brushmask: 0, bool capsule: false} /*, Sphere sphere*/) {
+    Float32List offset = new Float32List(3);
+
+    cm.checkcount++; // TODO: check all
+
+    tw.reset(); // tw.trace.fraction = 1; // assume it goes the entire distance until shown otherwise
+
+    tw.modelOrigin.set(origin);
+
+    if (mins == null) mins = ORIGIN;
+    if (maxs == null) maxs = ORIGIN;
+    if (origin == null) origin = ORIGIN;
+
+    tw.contents = brushmask;
+
+    // adjust so that mins and maxs are always symetric, which
+    // avoids some complications with plane expanding of rotated
+    // bmodels
+    for (int i = 0; i < 3; i++) {
+      offset[i] = (mins[i] + maxs[i]) * 0.5;
+      tw.size[0][i] = mins[i] - offset[i];
+      tw.size[1][i] = maxs[i] - offset[i];
+      tw.start[i] = start[i] + offset[i];
+      tw.end[i] = end[i] + offset[i];
+    }
+
+    // SKIPPED: Sphere handling
+
+    tw.maxOffset = tw.size[1][0] + tw.size[1][1] + tw.size[1][2];
+
+    // tw.offsets[signbits] = vector to apropriate corner from origin
+    for (int i = 0; i < 8; i++) {
+      tw.offsets[i][0] = tw.size[(i & 1) > 0 ? 1 : 0][0];
+      tw.offsets[i][1] = tw.size[(i & 2) > 0 ? 1 : 0][1];
+      tw.offsets[i][2] = tw.size[(i & 4) > 0 ? 1 : 0][2];
+    }
+
+    for (int i = 0; i < 3; i++) {
+      if (tw.start[i] < tw.end[i]) {
+        tw.bounds[0][i] = tw.start[i] + tw.size[0][i];
+        tw.bounds[1][i] = tw.end[i] + tw.size[1][i];
+      } else {
+        tw.bounds[0][i] = tw.end[i] + tw.size[0][i];
+        tw.bounds[1][i] = tw.start[i] + tw.size[1][i];
+      }
+    }
+
+    // check for point special case
+    if (tw.size[0][0] == 0 && tw.size[0][1] == 0 && tw.size[0][2] == 0) {
+      tw.isPoint = true;
+      tw.extents.scale(0);
+    } else {
+      tw.isPoint = false;
+      tw.extents[0] = tw.size[1][0];
+      tw.extents[1] = tw.size[1][1];
+      tw.extents[2] = tw.size[1][2];
+    }
+
+
 
     traceThroughTree(tw, 0, 0.0, 1.0, start, end);
 
-    if (tw.trace.fraction != 1.0) { // collided with something
+    if (tw.trace.fraction == 1) {
+      tw.trace.endPos.set(end);
+    } else { // collided with something
       for (int i = 0; i < 3; i++) {
         tw.trace.endPos[i] = start[i] + tw.trace.fraction * (end[i] - start[i]);
       }
@@ -332,10 +383,10 @@ class BSPTree {
     if (tw.trace.fraction <= p1f) {
       return; // already hit something nearer
     }
-    
+
     // if < 0, we are in a leaf node
     if (num < 0) {
-      traceThroughLeaf(tw, cm.leafs[-1-num]);
+      traceThroughLeaf(tw, cm.leafs[-1 - num]);
       return;
     }
 
@@ -344,38 +395,38 @@ class BSPTree {
 
     BSPNode node = cm.nodes[num];
     Plane plane = cm.planes[node.planeNum];
-  
+
     // adjust the plane distance apropriately for mins/maxs
-    if ( plane.type < 3 ) {
+    if (plane.type < 3) {
       t1 = p1[plane.type] - plane.dist;
       t2 = p2[plane.type] - plane.dist;
       offset = tw.extents[plane.type]; // TODO: make sure extents is correctly filled
     } else {
       t1 = plane.normal.dot(p1) - plane.dist;
       t2 = plane.normal.dot(p2) - plane.dist;
-      if(tw.isPoint) {
-        offset=0.0;
+      if (tw.isPoint) {
+        offset = 0.0;
       } else {
-        offset=2048.0; // this is silly
+        offset = 2048.0; // this is silly
       }
     }
-  
+
     if (t1 >= offset + 1 && t2 >= offset + 1) {
       traceThroughTree(tw, node.children[0], p1f, p2f, p1, p2);
       return;
-    } else if (t1 < -offset-1 && t2 < -offset-1) {
+    } else if (t1 < -offset - 1 && t2 < -offset - 1) {
       traceThroughTree(tw, node.children[1], p1f, p2f, p1, p2);
       return;
     }
-    
+
     // put the crosspoint SURFACE_CLIP_EPSILON pixels on the near side
     if (t1 < t2) {
-      idist = 1.0/(t1-t2);
+      idist = 1.0 / (t1 - t2);
       side = 1; // back
       frac2 = (t1 + offset + SURFACE_CLIP_EPSILON) * idist;
       frac = (t1 - offset + SURFACE_CLIP_EPSILON) * idist;
     } else if (t1 > t2) {
-      idist = 1.0/(t1-t2);
+      idist = 1.0 / (t1 - t2);
       side = 0; // front
       frac2 = (t1 - offset - SURFACE_CLIP_EPSILON) * idist;
       frac = (t1 + offset + SURFACE_CLIP_EPSILON) * idist;
@@ -386,12 +437,9 @@ class BSPTree {
     }
 
     // move up to the node
-    if (frac < 0)
-      frac = 0.0;
-    else if (frac > 1)
-      frac = 1.0;
-    
-    midf = p1f + (p2f - p1f)*frac;
+    if (frac < 0) frac = 0.0; else if (frac > 1) frac = 1.0;
+
+    midf = p1f + (p2f - p1f) * frac;
 
     for (int i = 0; i < 3; i++) {
       mid[i] = p1[i] + frac * (p2[i] - p1[i]);
@@ -399,12 +447,9 @@ class BSPTree {
 
     traceThroughTree(tw, node.children[side], p1f, midf, p1, mid);
 
-    if (frac2 < 0)
-      frac2 = 0.0;
-    else if (frac2 > 1)
-      frac2 = 1.0;
+    if (frac2 < 0) frac2 = 0.0; else if (frac2 > 1) frac2 = 1.0;
 
-    midf = p1f + (p2f - p1f)*frac2;
+    midf = p1f + (p2f - p1f) * frac2;
 
     for (int i = 0; i < 3; i++) {
       mid[i] = p1[i] + frac2 * (p2[i] - p1[i]);
@@ -421,11 +466,11 @@ class BSPTree {
     bool startout = false;
     bool getout = false;
     double f;
-    
+
     Brushside leadside;
 
     // TODO: if( tw.sphere.use)
-    
+
     for (int i = 0; i < brush.numSides; i++) {
       Brushside side = cm.brushSides[brush.firstSide + i];
       Plane plane = cm.planes[side.planeNum];
@@ -440,7 +485,7 @@ class BSPTree {
       if (d1 > 0) startout = true;
 
       // if completely in front of face, no intersection with the entire brush
-      if (d1 > 0 && ( d2 >= SURFACE_CLIP_EPSILON || d2 >= d1 ) ) {
+      if (d1 > 0 && (d2 >= SURFACE_CLIP_EPSILON || d2 >= d1)) {
         return;
       }
 
@@ -451,26 +496,23 @@ class BSPTree {
 
       // crosses face
       if (d1 > d2) { // line is entering into the brush
-        double f = (d1-SURFACE_CLIP_EPSILON) / (d1-d2);
-        if( f < 0)
-          f=0.0;
+        double f = (d1 - SURFACE_CLIP_EPSILON) / (d1 - d2);
+        if (f < 0) f = 0.0;
         if (f > enterFrac) {
           enterFrac = f;
           clipplane = plane;
           leadside = side;
         }
       } else { // line is leaving the brush
-        f = (d1+SURFACE_CLIP_EPSILON) / (d1-d2);
-        if( f > 1)
-          f=1.0;
-        if (f < leaveFrac)
-          leaveFrac = f;
+        f = (d1 + SURFACE_CLIP_EPSILON) / (d1 - d2);
+        if (f > 1) f = 1.0;
+        if (f < leaveFrac) leaveFrac = f;
       }
     }
 
     // all planes have been checked, and the trace was not
     // completely outside the brush
-    
+
     if (!startout) { // original point was inside brush
       tw.trace.startSolid = true;
       if (!getout) {
@@ -483,8 +525,7 @@ class BSPTree {
 
     if (enterFrac < leaveFrac) {
       if (enterFrac > -1 && enterFrac < tw.trace.fraction) {
-        if (enterFrac < 0.0)
-          enterFrac = 0.0;
+        if (enterFrac < 0.0) enterFrac = 0.0;
         tw.trace.fraction = enterFrac;
         tw.trace.plane = clipplane;
         tw.trace.surfaceFlags = cm.shaders[leadside.shaderNum].surfaceFlags;
@@ -492,6 +533,6 @@ class BSPTree {
       }
     }
 
-   
+
   }
 }
