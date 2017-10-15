@@ -7,7 +7,7 @@ class Trace {
   bool startSolid = false;
   double fraction = 1.0;
   Vector endPos = new Vector();
-  Plane plane = null; // new Plane(); // new Plane gets us stuck for some weird reason
+  Plane plane = new Plane();
   int surfaceFlags; // surface hit
   int contents; // contents on other side of surface hit
   int entityNum; // entity the contacted sirface is a part of
@@ -17,8 +17,7 @@ class Trace {
     startSolid = false;
     fraction = 1.0;
     endPos.scale(0);
-    plane = null;
-    //plane.clear(); //TODO: weird
+    plane.clear();
     surfaceFlags = 0;
     contents = 0;
     entityNum = 0;
@@ -539,7 +538,7 @@ class BSPTree {
       if (enterFrac > -1 && enterFrac < tw.trace.fraction) {
         if (enterFrac < 0.0) enterFrac = 0.0;
         tw.trace.fraction = enterFrac;
-        tw.trace.plane = clipplane;
+        tw.trace.plane.copy( clipplane);
         tw.trace.surfaceFlags = cm.shaders[leadside.shaderNum].surfaceFlags;
         tw.trace.contents = cm.shaders[brush.shaderNum].contentFlags;
       }

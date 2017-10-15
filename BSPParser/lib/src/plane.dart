@@ -37,4 +37,11 @@ class Plane {
     }
     return planes;
   }
+  
+  void copy(Plane plane) {
+    normal.set(plane.normal);
+    dist = plane.dist;
+    type = plane.type;
+    signbits = plane.signbits;
+  }
 }

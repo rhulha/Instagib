@@ -37,16 +37,16 @@ void tessellate(Surface face, List<Vertex> vertexes, List<int> indexes, int leve
 
       // Store control points
       Vertex c0 = vertexes[off + rowOff + px],
-          c1 = vertexes[off + rowOff + px + 1],
-          c2 = vertexes[off + rowOff + px + 2];
+             c1 = vertexes[off + rowOff + px + 1],
+             c2 = vertexes[off + rowOff + px + 2];
       rowOff += face.patch_size[0];
       Vertex c3 = vertexes[off + rowOff + px],
-          c4 = vertexes[off + rowOff + px + 1],
-          c5 = vertexes[off + rowOff + px + 2];
+             c4 = vertexes[off + rowOff + px + 1],
+             c5 = vertexes[off + rowOff + px + 2];
       rowOff += face.patch_size[0];
       Vertex c6 = vertexes[off + rowOff + px],
-          c7 = vertexes[off + rowOff + px + 1],
-          c8 = vertexes[off + rowOff + px + 2];
+             c7 = vertexes[off + rowOff + px + 1],
+             c8 = vertexes[off + rowOff + px + 2];
 
       int indexOff = face.numVerts;
       face.numVerts += L1 * L1;

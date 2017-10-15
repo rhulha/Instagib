@@ -159,12 +159,10 @@ class QuakeCamera extends Animatable
         return;
     }
     
-    /*
     if( groundTrace.plane.normal[2] < 0.7) { // steep slope
         onGround = false;
         return;
     }
-     */
     
     onGround = true;
   }
