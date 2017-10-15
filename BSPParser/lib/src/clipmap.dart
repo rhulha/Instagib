@@ -8,7 +8,7 @@ class ClipMap {
   List<Leaf> leafs;
   Int32List leafSurfaces;
   Int32List leafBrushes;
-  var models;
+  List<Model> models;
   List<Brush> brushes;
   List<Brushside> brushSides;
   List<Vertex> drawVerts;

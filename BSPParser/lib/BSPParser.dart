@@ -16,6 +16,7 @@ part 'src/helper.dart';
 part 'src/leaf.dart';
 part 'src/patch.dart';
 part 'src/plane.dart';
+part 'src/model.dart';
 
 part 'src/clipmap.dart';
 
@@ -104,6 +105,49 @@ class BSPParser {
       shaders[i] = new Shader( name, br.readOneInt(), br.readOneInt());
     }
     return shaders;
+  }
+  
+  // returns JSON (I hope)
+  String getEntities() {
+    BinaryReader br = getLump(LumpTypes.Entities);
+    String s = br.readString(br.length-1);
+    s = s.replaceAll("}\n{", "},\n{");
+    s = s.replaceAll('" "', '": "');
+    s = s.replaceAll('"\n"', '",\n"');
+    return "["+s+"]";
+  }
+  
+  List<Model> getModels() {
+    return Model.parse(getLump(LumpTypes.Models));
+  }
+
+  // Get it all !!
+  ClipMap getClipMap() {
+    ClipMap cm = new ClipMap();
+    cm.shaders = getShaders();
+    cm.surfaces = getSurfaces();
+    cm.surfacesUntessellated = new List<Surface>.generate(cm.surfaces.length, (int idx)=>new Surface.copy(cm.surfaces[idx]));
+    cm.drawVerts = getDrawVerts();
+    cm.drawIndexes = getDrawIndexes();
+        
+    for (Surface surface in cm.surfaces) {
+      if (surface.surfaceType == Surface.patch) {
+        //print("tessellate");
+        tessellate(surface, cm.drawVerts, cm.drawIndexes, 20);
+      }
+    }
+
+    cm.nodes = BSPNode.parse(getLump(LumpTypes.Nodes));
+    cm.planes = Plane.parse(getLump(LumpTypes.Planes));
+    cm.leafs = Leaf.parse(getLump(LumpTypes.Leafs));
+    cm.leafSurfaces = getLump(LumpTypes.LeafSurfaces).readAllSignedInts();
+    cm.leafBrushes = getLump(LumpTypes.LeafBrushes).readAllSignedInts();
+    cm.brushes = Brush.parse(getLump(LumpTypes.Brushes));
+    cm.brushSides = Brushside.parse(getLump(LumpTypes.BrushSides));
+
+    cm.models = getModels();
+
+    return cm;
   }
 }
 
