@@ -14,6 +14,13 @@ class BSPNode {
     mins = data.sublist(3, 6);
     maxs = data.sublist(6, 9);
   }
+  static List<BSPNode> parse(Int32List nodes) {
+    List<BSPNode> nodes2 = new List<BSPNode>(nodes.length~/9);
+    for( int i=0;i<nodes2.length;i++) {
+      nodes2[i] = new BSPNode(nodes.sublist(i*9, i*9+9));
+    }
+    return nodes2;
+  }
 }
 
 class Plane {
@@ -24,7 +31,13 @@ class Plane {
     normal = new Vector.useList(data.sublist(0, 3));
     distance = data[3];
   }
-
+  static List<Plane> parse(Float32List planes) {
+    List<Plane> planes2 = new List<Plane>(planes.length~/4);
+    for( int i=0;i<planes2.length;i++) {
+      planes2[i] = new Plane(planes.sublist(i*4, i*4+4));
+    }
+    return planes2;
+  }
 }
 
 class Leaf {
@@ -47,6 +60,13 @@ class Leaf {
     leafbrush = data[10];
     n_leafbrushes = data[11];
   }
+  static List<Leaf> parse(Int32List leaves) {
+    List<Leaf> leaves2 = new List<Leaf>(leaves.length~/12);
+    for( int i=0;i<leaves2.length;i++) {
+      leaves2[i] = new Leaf(leaves.sublist(i*12, i*12+12));
+    }
+    return leaves2;
+  }
 }
 
 class Brush {
@@ -59,6 +79,13 @@ class Brush {
     n_brushsides = data[1];
     texture = data[2];
   }
+  static List<Brush> parse(Int32List brushes) {
+    List<Brush> brushes2 = new List<Brush>(brushes.length~/3);
+    for( int i=0;i<brushes2.length;i++) {
+      brushes2[i] = new Brush(brushes.sublist(i*3, i*3+3));
+    }
+    return brushes2;
+  }
 }
 
 class Brushside {
@@ -68,6 +95,14 @@ class Brushside {
   Brushside( Int32List data) {
     plane = data[0];
     texture = data[1];
+  }
+  
+  static List<Brushside> parse(Int32List brushSides) {
+    List<Brushside> brushSides2 = new List<Brushside>(brushSides.length~/2);
+    for( int i=0;i<brushSides2.length;i++) {
+      brushSides2[i] = new Brushside(brushSides.sublist(i*2, i*2+2));
+    }
+    return brushSides2;
   }
 }
 

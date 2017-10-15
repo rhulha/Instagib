@@ -3,14 +3,16 @@ library instagib;
 import 'dart:html' as HTML;
 import 'dart:math' as Math;
 import 'dart:async';
-import 'package:chronosgl/chronosgl.dart';
+import 'dart:convert';
 import 'dart:typed_data';
+import 'package:chronosgl/chronosgl.dart';
 import 'sound.dart';
 
 part 'bsp.dart';
 part 'QuakeCamera.dart';
 part 'sobel_shader.dart';
 part 'laser.dart';
+part 'file_cache.dart';
 
 ChronosGL chronosGL;
 Camera camera;
@@ -20,7 +22,7 @@ Sound snd = new Sound();
 void main() {
   
   skipDefaultMouseMoveListener = true;
-  chronosGL = new ChronosGL('#webgl-canvas', useFramebuffer:false, fxShader: getSobelShader(), near: 0.1, far:2520.0);
+  chronosGL = new ChronosGL('#webgl-canvas', useFramebuffer:false, fxShader: createSobelShader(), near: 0.1, far:2520.0);
   
   //chronosGL.getRenderingContext().enable( 0x0B44);//RenderingContext.CULL_FACE
   
@@ -48,61 +50,37 @@ void main() {
     
     utils.addSkybox( "textures/skybox_", ".png", "nx", "px", "nz", "pz", "ny", "py");
     
-    ShaderProgram sp = chronosGL.createProgram( 'Normal2Color', chronosGL.getShaderLib().createPlane2ColorShader()); // LightShader()
+    ShaderProgram sp = chronosGL.createProgram( 'Normal2Color', chronosGL.getShaderLib().createPlane2ColorShader());
+    //ShaderProgram sp = chronosGL.createProgram( 'Normal2Color', chronosGL.getShaderLib().createLightShader());
+    //ShaderProgram sp = chronosGL.createProgram( 'Normal2Color', createPlane2GreyShader());
     
-    var indices = utils.loadBinaryFile( 'data/q3dm17.indices');
-    var verts = utils.loadBinaryFile( 'data/q3dm17.verts');
-    var normals = utils.loadBinaryFile( 'data/q3dm17.normals');
+    FileCache bfc = new FileCache();
+    bfc.addBinary('data/q3dm17.indices');
+    bfc.addBinary('data/q3dm17.verts');
+    bfc.addBinary('data/q3dm17.normals');
+    bfc.addBinary('data/q3dm17.nodes');
+    bfc.addBinary('data/q3dm17.planes');
+    bfc.addBinary('data/q3dm17.leafs');
+    bfc.addBinary('data/q3dm17.brushes');
+    bfc.addBinary('data/q3dm17.leafbrushes');
+    bfc.addBinary('data/q3dm17.brushsides');
+    bfc.addText('data/q3dm17.textures');
+    bfc.addText('data/q3dm17.ents');
     
-    var nodes = utils.loadBinaryFile( 'data/q3dm17.nodes');
-    var planes = utils.loadBinaryFile( 'data/q3dm17.planes');
-    var leaves = utils.loadBinaryFile( 'data/q3dm17.leafs');
-    var brushes = utils.loadBinaryFile( 'data/q3dm17.brushes');
-    var leafBrushes = utils.loadBinaryFile( 'data/q3dm17.leafbrushes');
-    var brushSides = utils.loadBinaryFile( 'data/q3dm17.brushsides');
-    
-    var textures = utils.loadJsonFile( 'data/q3dm17.textures');
-    var entities = utils.loadJsonFile( 'data/q3dm17.ents');
-    
-    Future.wait([verts, indices, nodes, planes, leaves, brushes, leafBrushes, textures, brushSides, normals]).then( (List list) {
-      Float32List vs = new Float32List.view( list[0]);
-      Float32List ns = new Float32List.view( list[9]);
-      Uint16List xs = new Uint16List.view( list[1]);
+    bfc.loadAllThenExecute((){
+      Float32List vs = bfc.get('data/q3dm17.verts').asFloat32List();
+      Float32List ns = bfc.get('data/q3dm17.normals').asFloat32List();
+      Uint16List  xs = bfc.get('data/q3dm17.indices').asUint16List();
 
-      Int32List nodes = new Int32List.view( list[2]);
-      List<BSPNode> nodes2 = new List<BSPNode>(nodes.length~/9);
-      for( int i=0;i<nodes2.length;i++) {
-        nodes2[i] = new BSPNode(nodes.sublist(i*9, i*9+9));
-      }
-      
-      Float32List planes = new Float32List.view( list[3]);
-      List<Plane> planes2 = new List<Plane>(planes.length~/4);
-      for( int i=0;i<planes2.length;i++) {
-        planes2[i] = new Plane(planes.sublist(i*4, i*4+4));
-      }
+      List<BSPNode> nodes = BSPNode.parse(bfc.get('data/q3dm17.nodes').asInt32List());
+      List<Plane> planes = Plane.parse(bfc.get('data/q3dm17.planes').asFloat32List());
+      List<Leaf> leaves = Leaf.parse(bfc.get('data/q3dm17.leafs').asInt32List());
+      List<Brush> brushes = Brush.parse(bfc.get('data/q3dm17.brushes').asInt32List());
+      Int32List leafBrushes = bfc.get('data/q3dm17.leafbrushes').asInt32List();
+      List<Brushside> brushSides = Brushside.parse(bfc.get('data/q3dm17.brushsides').asInt32List());
+      var textures = JSON.decode(bfc.get('data/q3dm17.textures').text);
 
-      Int32List leaves = new Int32List.view( list[4]);
-      List<Leaf> leaves2 = new List<Leaf>(leaves.length~/12);
-      for( int i=0;i<leaves2.length;i++) {
-        leaves2[i] = new Leaf(leaves.sublist(i*12, i*12+12));
-      }
-      
-      Int32List brushes = new Int32List.view( list[5]);
-      List<Brush> brushes2 = new List<Brush>(brushes.length~/3);
-      for( int i=0;i<brushes2.length;i++) {
-        brushes2[i] = new Brush(brushes.sublist(i*3, i*3+3));
-      }
-
-      Int32List leafBrushes = new Int32List.view( list[6]);
-      var textures = list[7];
-      
-      Int32List brushSides = new Int32List.view( list[8]);
-      List<Brushside> brushSides2 = new List<Brushside>(brushSides.length~/2);
-      for( int i=0;i<brushSides2.length;i++) {
-        brushSides2[i] = new Brushside(brushSides.sublist(i*2, i*2+2));
-      }
-
-      BSPTree bspTree = new BSPTree(nodes2, planes2, leaves2, brushes2, leafBrushes, textures, brushSides2);
+      BSPTree bspTree = new BSPTree(nodes, planes, leaves, brushes, leafBrushes, textures, brushSides);
       fpscam.setBSPTree( bspTree);
       
       for( var a =0; a<vs.length ;a++) {
