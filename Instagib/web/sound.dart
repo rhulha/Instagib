@@ -1,7 +1,6 @@
 library sound;
 
 import "dart:html" as HTML;
-import "dart:async" as Async;
 import "dart:typed_data";
 import "dart:web_audio";
 
@@ -15,7 +14,7 @@ class Sound
 
   Sound( [double volume=0.25]) {
     context = new AudioContext();
-    gainNode = context.createGainNode();
+    gainNode = context.createGain();
     gainNode.gain.value = volume;
     gainNode.connectNode(context.destination);
   }

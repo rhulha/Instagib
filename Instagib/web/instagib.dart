@@ -3,7 +3,7 @@ library instagib;
 import 'dart:html' as HTML;
 import 'dart:math' as Math;
 import 'dart:async';
-import 'package:ChronosGL/chronos_gl.dart';
+import 'package:chronosgl/chronosgl.dart';
 import 'dart:typed_data';
 import 'sound.dart';
 
@@ -20,7 +20,7 @@ Sound snd = new Sound();
 void main() {
   
   skipDefaultMouseMoveListener = true;
-  chronosGL = new ChronosGL('#webgl-canvas', useFramebuffer:false, fxShader: getSobelShader(), far:2520.0);
+  chronosGL = new ChronosGL('#webgl-canvas', useFramebuffer:true, fxShader: getSobelShader(), far:2520.0);
   
   //chronosGL.getRenderingContext().enable( 0x0B44);//RenderingContext.CULL_FACE
   
@@ -48,7 +48,7 @@ void main() {
     
     utils.addSkybox( "textures/skybox_", ".png", "nx", "px", "nz", "pz", "ny", "py");
     
-    ShaderProgram sp = chronosGL.createProgram( 'Normal2Color', chronosGL.getShaderLib().createLightShader());
+    ShaderProgram sp = chronosGL.createProgram( 'Normal2Color', chronosGL.getShaderLib().createFixedVertexColorShader()); // LightShader()
     
     var indices = utils.loadBinaryFile( 'data/q3dm17.indices');
     var verts = utils.loadBinaryFile( 'data/q3dm17.verts');
