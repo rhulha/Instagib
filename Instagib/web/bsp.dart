@@ -31,13 +31,31 @@ class BSPTree {
     
   }
   
-  PatchCollide generatePatchCollide( width, height, points) {
+  PatchCollide generatePatchCollide( int width, int height, List<Vector> points) {
     assert( width > 2 && height > 2);
     assert( ((width&1)==1) && ((height & 1)==1) );
     assert ( width <= 129 && height <= 129 );
     
+    Grid grid = new Grid();
+    grid.width = width;
+    grid.height = height;
+    grid.wrapWidth = false;
+    grid.wrapHeight = false;
+    for ( int i = 0 ; i < width ; i++ ) {
+      for ( int j = 0 ; j < height ; j++ ) {
+        grid.points[j*width + i] = new Vector.fromVector( points[j*width + i]);
+      }
+    }
+    
+    // subdivide the grid
+    setGridWrapWidth( grid);
+
     PatchCollide pc = new PatchCollide();
     return pc;
+  }
+  
+  void setGridWrapWidth(Grid grid) {
+    // TODO: next
   }
   
   

@@ -1,5 +1,13 @@
 part of instagib;
 
+class Grid {
+  int width;
+  int height;
+  bool wrapWidth;
+  bool wrapHeight;
+  List<Vector> points = new List<Vector>(129*129); // [width*height] MAX_GRID_SIZE = 129
+}
+
 class PatchPlane {
   List<double> plane = new List<double>(4);
   int   signbits;   // signx + (signy<<1) + (signz<<2), used as lookup during collision
