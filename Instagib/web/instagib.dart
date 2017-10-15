@@ -26,7 +26,8 @@ void main() {
 
   //ShaderProgram sp = chronosGL.createProgram( createDebugTexCoordsShader());
   //ShaderProgram sp = chronosGL.createProgram( createPlane2GreyShader());
-  ShaderProgram sp = chronosGL.createProgram( createInstagibLightShader());
+  ShaderProgram sp = chronosGL.createProgram( createInstagibShader());
+  //ShaderProgram sp = chronosGL.createProgram( createInstagibLightShader());
 
   //chronosGL.getRenderingContext().enable( 0x0B44);//RenderingContext.CULL_FACE
   
@@ -58,7 +59,7 @@ void main() {
     bfc.addBinary('data/q3dm17.indices');
     bfc.addBinary('data/q3dm17.verts');
     bfc.addBinary('data/q3dm17.normals');
-    bfc.addBinary('data/q3dm17.lmcoords');
+    bfc.addBinary('data/q3dm17.texcoords');
     bfc.addBinary('data/q3dm17.nodes');
     bfc.addBinary('data/q3dm17.planes');
     bfc.addBinary('data/q3dm17.leafs');
