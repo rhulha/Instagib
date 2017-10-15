@@ -83,13 +83,16 @@ class QuakeCamera extends Animatable
       dir.add( camera.getRight() );
     }
     
+    dir.z=0.0; // don't move up or down 
+    
     position.set( camera.getPos()).scale(100);
     move( dir, 50.0/3.0);
-    camera.setPosFromVec( position.scale(0.01));
     
     if( cpk[Key.SPACE] != null) {
       jump();
     }
+
+    camera.setPosFromVec( position.scale(0.01));
     
     if( movementY!=0)
       camera.matrix.rotate( movementY*0.006, camera.getRight());
@@ -187,7 +190,7 @@ class QuakeCamera extends Animatable
     if(!onGround) { return false; }
     
     onGround = false;
-    velocity[2] = q3movement_jumpvelocity;
+    velocity[2] = q3movement_jumpvelocity*5;
     
     //Make sure that the player isn't stuck in the ground
     double groundDist = position.dot( groundTrace.plane.normal ) - groundTrace.plane.distance - q3movement_playerRadius;
