@@ -2,6 +2,17 @@ part of instagib;
 
 double q3bsptree_trace_offset = 0.03125;
 
+const int EN_TOP = 0;
+const int EN_RIGHT = 1;
+const int EN_BOTTOM = 2;
+const int EN_LEFT = 3;
+
+const int SIDE_FRONT = 0;
+const int SIDE_BACK = 1;
+const int SIDE_ON = 2;
+const int SIDE_CROSS = 3;
+
+
 class Output {
   bool allSolid = false;
   bool startSolid = false;
@@ -101,7 +112,7 @@ class BSPTree {
     
     Facet facet;
     List<int> borders  = new List<int>(4);
-    List<int> noAdjust = new List<int>(4);
+    List<bool> noAdjust = new List<bool>(4);
 
     numPlanes = 0;
     numFacets = 0;
@@ -133,7 +144,7 @@ class BSPTree {
         } 
         noAdjust[EN_TOP] = ( borders[EN_TOP] == gridPlanes[i][j][0] );
         if ( borders[EN_TOP] == -1 || noAdjust[EN_TOP] ) {
-          borders[EN_TOP] = CM_EdgePlaneNum( grid, gridPlanes, i, j, 0 );
+          borders[EN_TOP] = edgePlaneNum( grid, gridPlanes, i, j, 0 );
         }
 
         borders[EN_BOTTOM] = -1;
@@ -144,7 +155,7 @@ class BSPTree {
         }
         noAdjust[EN_BOTTOM] = ( borders[EN_BOTTOM] == gridPlanes[i][j][1] );
         if ( borders[EN_BOTTOM] == -1 || noAdjust[EN_BOTTOM] ) {
-          borders[EN_BOTTOM] = CM_EdgePlaneNum( grid, gridPlanes, i, j, 2 );
+          borders[EN_BOTTOM] = edgePlaneNum( grid, gridPlanes, i, j, 2 );
         }
 
         borders[EN_LEFT] = -1;
@@ -155,7 +166,7 @@ class BSPTree {
         }
         noAdjust[EN_LEFT] = ( borders[EN_LEFT] == gridPlanes[i][j][1] );
         if ( borders[EN_LEFT] == -1 || noAdjust[EN_LEFT] ) {
-          borders[EN_LEFT] = CM_EdgePlaneNum( grid, gridPlanes, i, j, 3 );
+          borders[EN_LEFT] = edgePlaneNum( grid, gridPlanes, i, j, 3 );
         }
 
         borders[EN_RIGHT] = -1;
@@ -166,14 +177,11 @@ class BSPTree {
         }
         noAdjust[EN_RIGHT] = ( borders[EN_RIGHT] == gridPlanes[i][j][0] );
         if ( borders[EN_RIGHT] == -1 || noAdjust[EN_RIGHT] ) {
-          borders[EN_RIGHT] = CM_EdgePlaneNum( grid, gridPlanes, i, j, 1 );
+          borders[EN_RIGHT] = edgePlaneNum( grid, gridPlanes, i, j, 1 );
         }
 
-        if ( numFacets == MAX_FACETS ) {
-          Com_Error( ERR_DROP, "MAX_FACETS" );
-        }
-        facet = &facets[numFacets];
-        Com_Memset( facet, 0, sizeof( *facet ) );
+        assert( numFacets < 1024 ); // MAX_FACETS
+        facet = facets[numFacets] = new Facet();
 
         if ( gridPlanes[i][j][0] == gridPlanes[i][j][1] ) {
           if ( gridPlanes[i][j][0] == -1 ) {
@@ -189,7 +197,7 @@ class BSPTree {
           facet.borderNoAdjust[2] = noAdjust[EN_BOTTOM];
           facet.borderPlanes[3] = borders[EN_LEFT];
           facet.borderNoAdjust[3] = noAdjust[EN_LEFT];
-          CM_SetBorderInward( facet, grid, gridPlanes, i, j, -1 );
+          setBorderInward( facet, grid, gridPlanes, i, j, -1 );
           if ( CM_ValidateFacet( facet ) ) {
             CM_AddFacetBevels( facet );
             numFacets++;
@@ -206,10 +214,10 @@ class BSPTree {
           if ( facet.borderPlanes[2] == -1 ) {
             facet.borderPlanes[2] = borders[EN_BOTTOM];
             if ( facet.borderPlanes[2] == -1 ) {
-              facet.borderPlanes[2] = CM_EdgePlaneNum( grid, gridPlanes, i, j, 4 );
+              facet.borderPlanes[2] = edgePlaneNum( grid, gridPlanes, i, j, 4 );
             }
           }
-          CM_SetBorderInward( facet, grid, gridPlanes, i, j, 0 );
+          setBorderInward( facet, grid, gridPlanes, i, j, 0 );
           if ( CM_ValidateFacet( facet ) ) {
             CM_AddFacetBevels( facet );
             numFacets++;
@@ -231,7 +239,7 @@ class BSPTree {
           if ( facet.borderPlanes[2] == -1 ) {
             facet.borderPlanes[2] = borders[EN_TOP];
             if ( facet.borderPlanes[2] == -1 ) {
-              facet.borderPlanes[2] = CM_EdgePlaneNum( grid, gridPlanes, i, j, 5 );
+              facet.borderPlanes[2] = edgePlaneNum( grid, gridPlanes, i, j, 5 );
             }
           }
           CM_SetBorderInward( facet, grid, gridPlanes, i, j, 1 );
@@ -252,6 +260,148 @@ class BSPTree {
     Com_Memcpy( pf.planes, planes, numPlanes * sizeof( *pf.planes ) );
   }
   
+  void setBorderInward(Facet facet, Grid grid, List<List<List<int>>> gridPlanes, int i, int j, int which) {
+    List<Vector> points = new List<Vector>.generate(4, (idx)=>new Vector());
+    int numPoints;
+
+    switch ( which ) {
+    case -1:
+      points[0] = grid.points[i][j];
+      points[1] = grid.points[i+1][j];
+      points[2] = grid.points[i+1][j+1];
+      points[3] = grid.points[i][j+1];
+      numPoints = 4;
+      break;
+    case 0:
+      points[0] = grid.points[i][j];
+      points[1] = grid.points[i+1][j];
+      points[2] = grid.points[i+1][j+1];
+      numPoints = 3;
+      break;
+    case 1:
+      points[0] = grid.points[i+1][j+1];
+      points[1] = grid.points[i][j+1];
+      points[2] = grid.points[i][j];
+      numPoints = 3;
+      break;
+    default:
+      print( "setBorderInward: bad parameter" );
+      numPoints = 0;
+      break;
+    }
+
+    for ( int k=0; k<facet.numBorders; k++ ) {
+      int front = 0;
+      int back = 0;
+      for ( int l=0; l<numPoints; l++ ) {
+        int side = pointOnPlaneSide( points[l], facet.borderPlanes[k] );
+        if ( side == SIDE_FRONT ) {
+          front++;
+        } if ( side == SIDE_BACK ) {
+          back++;
+        }
+      }
+
+      if ( front>0 && back==0 ) {
+        facet.borderInward[k] = true;
+      } else if ( back>0 && front==0 ) {
+        facet.borderInward[k] = false;
+      } else if ( front==0 && back==0 ) {
+        // flat side border
+        facet.borderPlanes[k] = -1;
+      } else {
+        // bisecting side border
+        print( "WARNING: CM_SetBorderInward: mixed plane sides\n" );
+        facet.borderInward[k] = false;
+      }
+    }
+  }
+  
+  int pointOnPlaneSide(Vector p, int planeNum) {
+    List<double> plane;
+    double d;
+    if ( planeNum == -1 ) {
+      return SIDE_ON;
+    }
+    plane = planes[ planeNum ].plane;
+    d = DotProduct( p.array, plane ) - plane[3];
+    if ( d > 0.1 ) {
+      return SIDE_FRONT;
+    }
+    if ( d < -0.1 ) {
+      return SIDE_BACK;
+    }
+    return SIDE_ON;
+  }
+  
+  int edgePlaneNum(Grid grid, List<List<List<int>>> gridPlanes, int i, int j, int k) {
+    Vector p1, p2;
+    Vector up;
+    int p;
+
+    switch( k) {
+      case 0: // top border
+        p1 = grid.points[i][j];
+        p2 = grid.points[i+1][j];
+        p = gridPlane( gridPlanes, i, j, 0 );
+        VectorMA( p1, 4, planes[ p ].plane, up );
+        return findPlane( p1, p2, up );
+  
+      case 2: // bottom border
+        p1 = grid.points[i][j+1];
+        p2 = grid.points[i+1][j+1];
+        p = gridPlane( gridPlanes, i, j, 1 );
+        VectorMA( p1, 4, planes[ p ].plane, up );
+        return findPlane( p2, p1, up );
+  
+      case 3: // left border
+        p1 = grid.points[i][j];
+        p2 = grid.points[i][j+1];
+        p = gridPlane( gridPlanes, i, j, 1 );
+        VectorMA( p1, 4, planes[ p ].plane, up );
+        return findPlane( p2, p1, up );
+  
+      case 1: // right border
+        p1 = grid.points[i+1][j];
+        p2 = grid.points[i+1][j+1];
+        p = gridPlane( gridPlanes, i, j, 0 );
+        VectorMA( p1, 4, planes[ p ].plane, up );
+        return findPlane( p1, p2, up );
+  
+      case 4: // diagonal out of triangle 0
+        p1 = grid.points[i+1][j+1];
+        p2 = grid.points[i][j];
+        p = gridPlane( gridPlanes, i, j, 0 );
+        VectorMA( p1, 4, planes[ p ].plane, up );
+        return findPlane( p1, p2, up );
+  
+      case 5: // diagonal out of triangle 1
+        p1 = grid.points[i][j];
+        p2 = grid.points[i+1][j+1];
+        p = gridPlane( gridPlanes, i, j, 1 );
+        VectorMA( p1, 4, planes[ p ].plane, up );
+        return findPlane( p1, p2, up );
+    }
+
+    print( "edgePlaneNum: bad k" );
+    return -1;
+  }
+  
+  int gridPlane(List<List<List<int>>> gridPlanes, int i, int j, int tri) {
+    int p = gridPlanes[i][j][tri];
+    if ( p != -1 ) {
+      return p;
+    }
+    p = gridPlanes[i][j][tri>0?0:1];
+    if ( p != -1 ) {
+      return p;
+    }
+
+    // should never happen
+    print( "WARNING: CM_GridPlane unresolvable\n" );
+    return -1;
+  }
+  
   double DotProduct( List<double> a, List<double> b) {
     return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
   }
@@ -259,6 +409,11 @@ class BSPTree {
     for(int i=0; i<b.length; i++) {
       b[i] = a[i];
     }
+  }
+  void VectorMA( Vector v, num s, List<double> b, Vector o) {
+    o[0]=v[0]+b[0]*s;
+    o[1]=v[1]+b[1]*s;
+    o[2]=v[2]+b[2]*s;
   }
   
   int findPlane(Vector p1, Vector p2, Vector p3) {
