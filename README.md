@@ -62,6 +62,22 @@ For example:
 * Screenshots for GUI issues.
 * The operating system.
 
+## Development setup
+
+will be added on request
+
+## Release History
+
+* 0.5
+    * jump pads work now
+* 0.4
+    * Move around map with realistic physics incl. colliding against curved sourfaces
+* 0.3
+    * Move around map with realistic physics incl. colliding against floors and walls
+* 0.2
+    * Render q3dm17 with curved sourfaces (Thanks Toji)
+* 0.1
+    * Render q3dm17 without curved sourfaces
 
 ## Contribute / Pull Requests
 Pull Requests are always welcome. 
