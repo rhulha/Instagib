@@ -41,7 +41,7 @@ No installation needed, just point your browser to: https://rhulha.github.io/Ins
 ## Bugs
 * The middle jump pad gets you stuck many times
 * If you jump against a ceiling you get stuck
-* If you have an idea why this is happening I would appreciate you opening [an issue](https://github.com/rhulha/Instagib/issues/new): 
+* If you have an idea why this is happening I would appreciate you opening [an issue](https://github.com/rhulha/Instagib/issues/new).
 
 ## Missing features / TODOs
 * Model rendering (MD3)
@@ -68,10 +68,12 @@ will be added on request
 
 ## Release History
 
+* 0.6
+    * jump pads work now ([Here is the story behind why it took me 2 years to complete this](http://instagib.hulha.net/my-jump-pad-story.html))
 * 0.5
-    * jump pads work now
-* 0.4
     * Move around map with realistic physics incl. colliding against curved sourfaces
+* 0.4
+    * Added railgun visual effect and sound and jump sound
 * 0.3
     * Move around map with realistic physics incl. colliding against floors and walls
 * 0.2
