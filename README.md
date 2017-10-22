@@ -88,6 +88,7 @@ Pull Requests are always welcome.
 * The man, the legend: [John Carmack](https://twitter.com/id_aa_carmack)
 * [Brandon Jones (Toji)](http://blog.tojicode.com/) for his awesome [q3tourney2 demo](http://media.tojicode.com/q3bsp/) which helped me getting started a ton.
 * Kekoa Proudfoot (Mr Alligator) for his excellent [Quake 3 map specs document](http://www.mralligator.com/q3/). (I recommend to read the q3 source code regarding map loading, right after reading Kekoa's specs)
+* OpenArena for the sounds [OpenArena](http://www.openarena.ws)
 
 ## License
 GPL v2 (Same as the Quake3 source code)

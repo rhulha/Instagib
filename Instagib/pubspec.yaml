@@ -1,10 +1,27 @@
-name: Instagib
-description: Instagib Q3DM17 running with WebGL
+name: 'Instagib'
+version: 0.6.0
+description: Instagib game using WebGL, Dart and the map Q3DM17 - The Longest Yard from Quake3Arena.
+author: rhulha java4life@gmail.com
+homepage: https://github.com/rhulha/Instagib
+
+environment:
+  sdk: '>=1.21.0 <2.0.0'
+
+#dependencies:
+#  my_dependency: any
+
+dev_dependencies:
+  dart_to_js_script_rewriter: '^1.0.1'
+
 dependencies:
   chronosgl:
-    path: C:\Coding\Projekte\Privat\ChronosGL
+    path: C:\Coding\Projects\Private\dart\ChronosGL
   chronosal:
-    path: C:\Coding\Projekte\Privat\ChronosAL
+    path: C:\Coding\Projects\Private\dart\ChronosAL
   bspparser:
-    path: C:\Coding\Projekte\Privat\Q3MapConverter\Dart\BSPParser
+    path: C:\Coding\Projects\Private\dart\Instagib\BSPParser
   browser: any
+
+
+transformers:
+- dart_to_js_script_rewriter

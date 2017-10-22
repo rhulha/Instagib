@@ -48,52 +48,12 @@ class QuakeCamera extends Animatable
   
   QuakeCamera( this.camera) {
 
-    void fullscreenWorkaround(HTML.Element element) {
-      var elem = new JS.JsObject.fromBrowserObject(element);
-
-      if (elem.hasProperty("requestFullscreen")) {
-        elem.callMethod("requestFullscreen");
-      }
-      else {
-        List<String> vendors = ['moz', 'webkit', 'ms', 'o'];
-        for (String vendor in vendors) {
-          String vendorFullscreen = "${vendor}RequestFullscreen";
-          if (vendor == 'moz') {
-            vendorFullscreen = "${vendor}RequestFullScreen";
-          }
-          if (elem.hasProperty(vendorFullscreen)) {
-            elem.callMethod(vendorFullscreen);
-            return;
-          }
-        }
-      }
-    }
-    void pointerLockWorkaround(HTML.Element element) {
-      var elem = new JS.JsObject.fromBrowserObject(element);
-
-      if (elem.hasProperty("requestPointerLock")) {
-        elem.callMethod("requestPointerLock");
-      }
-      else {
-        List<String> vendors = ['moz', 'webkit', 'ms', 'o'];
-        for (String vendor in vendors) {
-          String vendorFullscreen = "${vendor}RequestPointerLock";
-          if (elem.hasProperty(vendorFullscreen)) {
-            elem.callMethod(vendorFullscreen);
-            return;
-          }
-        }
-      }
-    }
-
     HTML.HtmlElement canvas = HTML.document.body;// querySelector('#webgl-canvas');
     canvas.onMouseDown.listen( (HTML.MouseEvent e) {
       e.preventDefault();
       if( HTML.document.pointerLockElement != canvas) {
-        //canvas.requestPointerLock();
-        pointerLockWorkaround(canvas);
-        //canvas.requestFullscreen();
-        fullscreenWorkaround(canvas);
+        canvas.requestPointerLock();
+        canvas.requestFullscreen();
       } else {
         snd.playSound('rail');
         addLaser(camera, 0, -0.2);
@@ -115,6 +75,37 @@ class QuakeCamera extends Animatable
   Vector trace_mins=new Vector();
   Vector trace_maxs=new Vector();
   //Vector range = new Vector( 40, 40, 52 );
+  var rnd = new Math.Random();
+  //List<int> spawn_angles = [?,90];
+  //List<int> corrected_spawn_angles = [?,0,?,?,?,?,?,90];
+  int r;
+
+  void respawn()
+  {
+      List<String> ipd = bsp.cm.info_player_deathmatch;
+      String origin = ipd[rnd.nextInt(ipd.length)];
+      List<double> split = origin.split(" ").map(double.parse).toList(growable:false);
+      position.set(split[0], split[1], split[2]);
+      camera.transform.identity();
+      camera.rotX(-Math.PI/2.0); // look up 90° from floor
+      // to convert from quake angle to our angle, I figured out this formula must be used: y=-x+90
+      camera.transform.rotateZ(Math.PI*(-split[3]+90)/180.0);
+      velocity.scale(0);
+      //movementX=0;
+      //movementY=0;
+  }
+
+  bool checkTrigger(int modelNum)
+  {
+      //mins.set(position).subtract(range);
+      //maxs.set(position).add(range);
+      trace_mins.set(position).add(mins);
+      trace_maxs.set(position).add(maxs);
+      // TransformedBoxTrace seems not to be necessary for jumppads
+      Trace trace = new Trace();
+      bsp.trace(trace, ORIGIN, ORIGIN, trace_mins, trace_maxs, modelNum, ORIGIN, -1);
+      return trace.startSolid;
+  }
 
   void animate( double elapsed)
   {
@@ -135,41 +126,42 @@ class QuakeCamera extends Animatable
     if (cpk[Key.D] != null) {
       dir.add( camera.getRight() );
     }
-    
     dir.z=0.0; // don't move up or down 
     
     position.set( camera.getPos()).scale(100);
 
+    if (cpk[Key.K] != null) { // respawn/kill self
+      respawn();
+      cpk[Key.K] = null;
+    }
+    
     if( cpk[Key.SPACE] != null) {
       jump(false);
       cpk[Key.SPACE] = null;
     }
 
-    for( String modelNumStr in bsp.cm.trigger.keys) {
-      var targetNumStr = bsp.cm.trigger[modelNumStr];
+    for( String modelNumStr in bsp.cm.trigger_push.keys) {
       int modelNum = int.parse(modelNumStr.substring(1));  // remove leading * char
-
-
-      //mins.set(position).subtract(range);
-      //maxs.set(position).add(range);
-      trace_mins.set(position).add(mins);
-      trace_maxs.set(position).add(maxs);
-
-      // TransformedBoxTrace seems not to be necessary for jumppads
-      Trace trace = new Trace();
-      bsp.trace(trace, ORIGIN, ORIGIN, trace_mins, trace_maxs, modelNum, ORIGIN, -1);
-
-      if( trace.startSolid) {
+      if(checkTrigger(modelNum)) {
         jump(true);
-        String targetPos = bsp.cm.targets[targetNumStr];
+        var targetNumStr = bsp.cm.trigger_push[modelNumStr];
+        String targetPos = bsp.cm.target_position[targetNumStr];
         List<String> split = targetPos.split(" ");
 
         Model m = bsp.cm.models[modelNum];
         velocity.set(AimAtTarget( m, double.parse(split[0]), double.parse(split[1]), double.parse(split[2]) ));
-        snd.playSound('jumppad');
+        snd.playSound('jumppad', true);
       }
-
     }
+
+    for( String modelNumStr in bsp.cm.trigger_hurt.keys) {
+      int modelNum = int.parse(modelNumStr.substring(1));  // remove leading * char
+      if(checkTrigger(modelNum)) {
+        snd.playSound('gibsplt', true);
+        respawn();
+      }
+    }
+
     move( dir, 50.0/3.0);
     camera.setPosFromVec( position.scale(0.01));
     

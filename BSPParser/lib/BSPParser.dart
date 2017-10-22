@@ -2,6 +2,7 @@ library bspparser;
 
 import 'dart:typed_data';
 import 'dart:math' as Math;
+import 'dart:convert' as CONVERT;
 import 'package:chronosgl/chronosmath.dart';
 
 part 'src/binary_reader.dart';
@@ -108,7 +109,7 @@ class BSPParser {
   }
   
   // returns JSON (I hope)
-  String getEntities() {
+  String _getEntities() {
     BinaryReader br = getLump(LumpTypes.Entities);
     String s = br.readString(br.length-1);
     s = s.replaceAll("}\n{", "},\n{");
@@ -165,13 +166,27 @@ class BSPParser {
       b.bounds[1][2] =   cm.planes[cm.brushSides[b.firstSide+5].planeNum].dist;
     }
 
+    List entities = CONVERT.JSON.decode(_getEntities());
+
+    for (Map ent in entities) {
+      if (ent["classname"] == "trigger_push") { // usually jump pads
+        cm.trigger_push[ent["model"]] = ent["target"];
+      } else if (ent["classname"] == "target_position") { // usually jump pad targets
+        cm.target_position[ent["targetname"]] = ent["origin"];
+      } else if (ent["classname"] == "info_player_deathmatch") { // player spawn points
+        cm.info_player_deathmatch.add( ent["origin"] + " " + ent["angle"]);
+      } else if (ent["classname"] == "trigger_hurt") { // painful areas
+        cm.trigger_hurt[ent["model"]] = ent["dmg"];
+      }
+
+    }
+
     /*
     for( Brush b in cm.brushes) {
       print(b.bounds[0]);
       print(b.bounds[1]);
     }
     */
-
 
     cm.models = getModels();
 

@@ -1,9 +1,7 @@
 library instagib;
 
 import 'dart:html' as HTML;
-import 'dart:js' as JS;
 import 'dart:math' as Math;
-import 'dart:convert' as CONVERT;
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:chronosgl/chronosgl.dart';
@@ -48,6 +46,7 @@ void main() {
   snd.loadSound('data/jump1.wav', 'jump');
   snd.loadSound('data/jumppad.wav', 'jumppad');
   snd.loadSound('data/railgf1a.wav', 'rail');
+  snd.loadSound('data/gibsplt1.wav', 'gibsplt');
   
   textureCache.loadAllThenExecute(() {
 
@@ -56,17 +55,6 @@ void main() {
     chronosGL.getUtils().loadBinaryFile("data/q3dm17.bsp").then((ByteBuffer bspFile){
       BSPParser parser = new BSPParser(bspFile);
       ClipMap cm = parser.getClipMap();
-
-      List entities = CONVERT.JSON.decode(parser.getEntities());
-
-      for (Map ent in entities) {
-        if (ent["classname"] == "trigger_push") {
-          cm.trigger[ent["model"]] = ent["target"];
-        } else if (ent["classname"] == "target_position") {
-          cm.targets[ent["targetname"]] = ent["origin"];
-        }
-      }
-
 
       changeColors(cm.surfaces, cm.drawIndexes, cm.shaders, cm.drawVerts);
 

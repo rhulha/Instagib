@@ -1,6 +1,7 @@
 name: bspparser
+version: 0.6.0
 description: A Quake3 BSP file parser
 dependencies:
   chronosgl:
-    path: C:\Coding\Projekte\Privat\ChronosGL
+    path: C:\Coding\Projects\Private\dart\ChronosGL
 #  unittest: any

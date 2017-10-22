@@ -20,8 +20,12 @@ class ClipMap {
   var lightGrid;
   var visibility;
 
-  Map<String, String> trigger = new Map<String, String>();
-  Map<String, String> targets = new Map<String, String>();
+  // Entities
+  Map<String, String> trigger_push = new Map<String, String>();
+  Map<String, String> target_position = new Map<String, String>();
+  List<String> info_player_deathmatch = new List<String>();
+  Map<String, String> trigger_hurt = new Map<String, String>();
+  
 
 
   int checkcount=0;
