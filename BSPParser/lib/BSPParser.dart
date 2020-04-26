@@ -195,3 +195,94 @@ class BSPParser {
 }
 
 
+class MD3Parser {
+  int flags;
+  int num_frames;
+  int num_tags;
+  int num_surfaces;
+  int num_skins;
+  int ofs_frames;
+  int ofs_tags;
+  int ofs_surfaces;
+  int ofs_eof;
+
+  int num_shaders;
+  int num_verts;
+  int num_triangles;
+  int ofs_triangles;
+  int ofs_shaders;
+  int ofs_st;
+  int ofs_xyznormal;
+  int ofs_end;
+
+  Uint16List indexes;
+  Int16List verts;
+
+  MD3Parser(ByteBuffer bb) {
+    BinaryReader br = new BinaryReader(bb, 0, bb.lengthInBytes);
+
+    if(br.readString(4) != "IDP3")
+      throw new Exception("No IDP3");
+    if(br.readOneSignedInt() != 15) // Quake3 MD3 version ID
+      throw new Exception("version != 15");
+
+    String name = br.readString(64);
+    flags = br.readOneSignedInt();
+    num_frames = br.readOneSignedInt();
+    num_tags = br.readOneSignedInt();
+    num_surfaces = br.readOneSignedInt();
+    num_skins = br.readOneSignedInt();
+    ofs_frames = br.readOneSignedInt();
+    ofs_tags = br.readOneSignedInt();
+    ofs_surfaces = br.readOneSignedInt();
+    ofs_eof = br.readOneSignedInt();
+
+    br.pos = ofs_surfaces;
+    //BinaryReader surfaces = new BinaryReader(bb, ofs_surfaces, 13);
+
+    if(br.readString(4) != "IDP3")
+      throw new Exception("No IDP3");
+
+    br.readString(64); // name
+    br.readOneSignedInt(); // another useless flags;
+
+    if(num_frames != br.readOneSignedInt())
+      throw new Exception("num_frames inconsistent");
+
+    num_shaders = br.readOneSignedInt();
+
+    if(num_shaders != 1) // this code can currently only deal with one shader
+      throw new Exception("num_shaders != 1");
+
+    num_verts = br.readOneSignedInt();
+    num_triangles = br.readOneSignedInt();
+    ofs_triangles = br.readOneSignedInt();
+    ofs_shaders = br.readOneSignedInt();
+    ofs_st = br.readOneSignedInt();
+    ofs_xyznormal = br.readOneSignedInt();
+    ofs_end = br.readOneSignedInt();
+
+    print( "num_tris: " + num_triangles.toString());
+
+    String shader1Name = br.readString(64);
+    int shader1Index = br.readOneSignedInt();
+
+    indexes = br.readInt32IntoUInt16(3 * num_triangles);
+
+    // skipping uv coords
+
+    br.pos = ofs_xyznormal + ofs_surfaces;
+
+    verts = br.readSignedInt16(4 * num_verts * num_frames);
+
+    /*
+    for(int i=0;i<3; i++) {
+      print(verts[i]);
+    }
+
+    for(int i=verts.length-3;i<verts.length; i++) {
+      print(verts[i]);
+    }
+    */
+  }
+}

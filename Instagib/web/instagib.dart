@@ -20,6 +20,53 @@ Camera camera;
 TextureCache textureCache;
 ChronosAL snd = new ChronosAL();
 
+void loadMD3(ShaderProgram sp, String name, double offset, int frame) {
+  chronosGL.getUtils().loadBinaryFile(name).then((ByteBuffer md3File) {
+    MD3Parser md3 = new MD3Parser(md3File);
+    List<double> vertsList = new List<double>();
+    List<double> normalsList = new List<double>();
+    List<double> colorsList = new List<double>();
+
+    print(md3.verts.length);
+
+    for(int i=0; i<md3.verts.length; i++) {
+      if(i%4==3) {
+        double lat = (( md3.verts[i] >> 8 ) & 0xff).toDouble();
+        double lng = (( md3.verts[i] & 0xff )).toDouble();
+        lat *= Math.PI/128;
+        lng *= Math.PI/128;
+
+        normalsList.add( Math.cos(lat) * Math.sin(lng));
+        normalsList.add( Math.sin(lat) * Math.sin(lng));
+        normalsList.add( Math.cos(lng));
+
+        colorsList.add( Math.cos(lat) * Math.sin(lng));
+        colorsList.add( Math.sin(lat) * Math.sin(lng));
+        colorsList.add( Math.cos(lng));
+      } else {
+
+        if(i%4==0) {
+          vertsList.add(3+md3.verts[i]/(64.0*100.0));
+        } else if(i%4==2) {
+          vertsList.add(2.5+offset+md3.verts[i]/(64.0*100.0));
+        } else {
+          vertsList.add(6+md3.verts[i]/(64.0*100.0));
+        }
+      }
+    }
+    Float32List vs = new Float32List.fromList(vertsList);
+    Float32List ns = new Float32List.fromList(normalsList);
+    Float32List cs = new Float32List.fromList(colorsList);
+
+    for(int i=0; i < md3.indexes.length; i++) {
+      md3.indexes[i] += frame*md3.num_verts;
+    }
+
+    sp.add(
+        new MeshData(vertices: vs, normals: ns, vertexIndices: md3.indexes, colors: cs).createMesh());
+  });
+}
+
 void main() {
   
   skipDefaultMouseMoveListener = true;
@@ -87,9 +134,13 @@ void main() {
         vs[a] = vs[a] / 100;
       }
 
-      sp.add(          new MeshData(vertices: vs, normals: ns, vertexIndices: xs, colors: cs)              .createMesh());
+      sp.add( new MeshData(vertices: vs, normals: ns, vertexIndices: xs, colors: cs).createMesh());
       chronosGL.run();
     });
+
+    loadMD3(sp, "data/head.md3", 1.3, 0);
+    loadMD3(sp, "data/upper.md3", 1.1, 151);
+    loadMD3(sp, "data/lower.md3", 0.9, 0);
 
   });
 
