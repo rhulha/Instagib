@@ -3,5 +3,9 @@ version: 0.6.0
 description: A Quake3 BSP file parser
 dependencies:
   chronosgl:
-    path: C:\Coding\Projects\Private\dart\ChronosGL
+    path: C:\BackupYes\Coding\Projects\Private\ChronosGL\Dart\ChronosGL
 #  unittest: any
+
+environment:
+  sdk: '2.10.5'
+  

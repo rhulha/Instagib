@@ -56,7 +56,7 @@ class BSPParser {
   BinaryReader getLump(int type) {
     int offset = header[2 + type * 2];
     int length = header[2 + type * 2 + 1];
-    
+
     print("getLump: $type $offset $length");
     return new BinaryReader(bb, offset, length);
   }
@@ -76,21 +76,21 @@ class BSPParser {
     int length = br.length ~/ Vertex.size;
     List<Vertex> vertexes = new List<Vertex>(); // don't set fixed length so this list can grow
     for (int i = 0; i < length; i++) {
-      vertexes.add( new Vertex(br));
+      vertexes.add(new Vertex(br));
     }
     return vertexes;
   }
-  
+
   List<int> getDrawIndexes() {
     BinaryReader br = getLump(LumpTypes.DrawIndexes);
     int length = br.length ~/ 4;
     List<int> drawIndexes = new List<int>(); // don't set fixed length so this list can grow
     for (int i = 0; i < length; i++) {
-      drawIndexes.add( br.readOneInt());
+      drawIndexes.add(br.readOneInt());
     }
     return drawIndexes;
   }
-  
+
   List<Shader> getShaders() {
     BinaryReader br = getLump(LumpTypes.Shaders);
 
@@ -100,24 +100,24 @@ class BSPParser {
     print(Shader.size);
     for (int i = 0; i < shaders.length; i++) {
       String name = br.readString(64);
-      if( name.indexOf("\x00") >= 0) {
+      if (name.indexOf("\x00") >= 0) {
         name = name.substring(0, name.indexOf("\x00"));
       }
-      shaders[i] = new Shader( name, br.readOneInt(), br.readOneInt());
+      shaders[i] = new Shader(name, br.readOneInt(), br.readOneInt());
     }
     return shaders;
   }
-  
+
   // returns JSON (I hope)
   String _getEntities() {
     BinaryReader br = getLump(LumpTypes.Entities);
-    String s = br.readString(br.length-1);
+    String s = br.readString(br.length - 1);
     s = s.replaceAll("}\n{", "},\n{");
     s = s.replaceAll('" "', '": "');
     s = s.replaceAll('"\n"', '",\n"');
-    return "["+s+"]";
+    return "[" + s + "]";
   }
-  
+
   List<Model> getModels() {
     return Model.parse(getLump(LumpTypes.Models));
   }
@@ -127,10 +127,10 @@ class BSPParser {
     ClipMap cm = new ClipMap();
     cm.shaders = getShaders();
     cm.surfaces = getSurfaces();
-    cm.surfacesUntessellated = new List<Surface>.generate(cm.surfaces.length, (int idx)=>new Surface.copy(cm.surfaces[idx]));
+    cm.surfacesUntessellated = new List<Surface>.generate(cm.surfaces.length, (int idx) => new Surface.copy(cm.surfaces[idx]));
     cm.drawVerts = getDrawVerts();
     cm.drawIndexes = getDrawIndexes();
-        
+
     for (Surface surface in cm.surfaces) {
       if (surface.surfaceType == Surface.patch) {
         //print("tessellate");
@@ -145,40 +145,43 @@ class BSPParser {
     cm.leafBrushes = getLump(LumpTypes.LeafBrushes).readAllSignedInts();
     cm.brushes = Brush.parse(getLump(LumpTypes.Brushes));
 
-    for( Brush b in cm.brushes) {
+    for (Brush b in cm.brushes) {
       b.contents = cm.shaders[b.shaderNum].contentFlags;
     }
 
     cm.brushSides = Brushside.parse(getLump(LumpTypes.BrushSides));
 
-    for( Brushside bs in cm.brushSides) {
+    for (Brushside bs in cm.brushSides) {
       bs.surfaceFlags = cm.shaders[bs.shaderNum].surfaceFlags;
     }
 
-    for( Brush b in cm.brushes) {
-      b.bounds[0][0] = - cm.planes[cm.brushSides[b.firstSide+0].planeNum].dist;
-      b.bounds[1][0] =   cm.planes[cm.brushSides[b.firstSide+1].planeNum].dist;
+    for (Brush b in cm.brushes) {
+      b.bounds[0][0] = -cm.planes[cm.brushSides[b.firstSide + 0].planeNum].dist;
+      b.bounds[1][0] = cm.planes[cm.brushSides[b.firstSide + 1].planeNum].dist;
 
-      b.bounds[0][1] = - cm.planes[cm.brushSides[b.firstSide+2].planeNum].dist;
-      b.bounds[1][1] =   cm.planes[cm.brushSides[b.firstSide+3].planeNum].dist;
+      b.bounds[0][1] = -cm.planes[cm.brushSides[b.firstSide + 2].planeNum].dist;
+      b.bounds[1][1] = cm.planes[cm.brushSides[b.firstSide + 3].planeNum].dist;
 
-      b.bounds[0][2] = - cm.planes[cm.brushSides[b.firstSide+4].planeNum].dist;
-      b.bounds[1][2] =   cm.planes[cm.brushSides[b.firstSide+5].planeNum].dist;
+      b.bounds[0][2] = -cm.planes[cm.brushSides[b.firstSide + 4].planeNum].dist;
+      b.bounds[1][2] = cm.planes[cm.brushSides[b.firstSide + 5].planeNum].dist;
     }
 
-    List entities = CONVERT.JSON.decode(_getEntities());
+    List entities = CONVERT.jsonDecode(_getEntities());
 
     for (Map ent in entities) {
-      if (ent["classname"] == "trigger_push") { // usually jump pads
+      if (ent["classname"] == "trigger_push") {
+        // usually jump pads
         cm.trigger_push[ent["model"]] = ent["target"];
-      } else if (ent["classname"] == "target_position") { // usually jump pad targets
+      } else if (ent["classname"] == "target_position") {
+        // usually jump pad targets
         cm.target_position[ent["targetname"]] = ent["origin"];
-      } else if (ent["classname"] == "info_player_deathmatch") { // player spawn points
-        cm.info_player_deathmatch.add( ent["origin"] + " " + ent["angle"]);
-      } else if (ent["classname"] == "trigger_hurt") { // painful areas
+      } else if (ent["classname"] == "info_player_deathmatch") {
+        // player spawn points
+        cm.info_player_deathmatch.add(ent["origin"] + " " + ent["angle"]);
+      } else if (ent["classname"] == "trigger_hurt") {
+        // painful areas
         cm.trigger_hurt[ent["model"]] = ent["dmg"];
       }
-
     }
 
     /*
@@ -193,7 +196,6 @@ class BSPParser {
     return cm;
   }
 }
-
 
 class MD3Parser {
   int flags;
@@ -221,9 +223,8 @@ class MD3Parser {
   MD3Parser(ByteBuffer bb) {
     BinaryReader br = new BinaryReader(bb, 0, bb.lengthInBytes);
 
-    if(br.readString(4) != "IDP3")
-      throw new Exception("No IDP3");
-    if(br.readOneSignedInt() != 15) // Quake3 MD3 version ID
+    if (br.readString(4) != "IDP3") throw new Exception("No IDP3");
+    if (br.readOneSignedInt() != 15) // Quake3 MD3 version ID
       throw new Exception("version != 15");
 
     String name = br.readString(64);
@@ -240,18 +241,16 @@ class MD3Parser {
     br.pos = ofs_surfaces;
     //BinaryReader surfaces = new BinaryReader(bb, ofs_surfaces, 13);
 
-    if(br.readString(4) != "IDP3")
-      throw new Exception("No IDP3");
+    if (br.readString(4) != "IDP3") throw new Exception("No IDP3");
 
     br.readString(64); // name
     br.readOneSignedInt(); // another useless flags;
 
-    if(num_frames != br.readOneSignedInt())
-      throw new Exception("num_frames inconsistent");
+    if (num_frames != br.readOneSignedInt()) throw new Exception("num_frames inconsistent");
 
     num_shaders = br.readOneSignedInt();
 
-    if(num_shaders != 1) // this code can currently only deal with one shader
+    if (num_shaders != 1) // this code can currently only deal with one shader
       throw new Exception("num_shaders != 1");
 
     num_verts = br.readOneSignedInt();
@@ -262,7 +261,7 @@ class MD3Parser {
     ofs_xyznormal = br.readOneSignedInt();
     ofs_end = br.readOneSignedInt();
 
-    print( "num_tris: " + num_triangles.toString());
+    print("num_tris: " + num_triangles.toString());
 
     String shader1Name = br.readString(64);
     int shader1Index = br.readOneSignedInt();

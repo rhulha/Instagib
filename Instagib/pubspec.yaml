@@ -5,23 +5,20 @@ author: rhulha java4life@gmail.com
 homepage: https://github.com/rhulha/Instagib
 
 environment:
-  sdk: '>=1.21.0 <2.0.0'
-
-#dependencies:
-#  my_dependency: any
+  sdk: '2.10.5'
 
 dev_dependencies:
-  dart_to_js_script_rewriter: '^1.0.1'
+  build_runner: 'any'
+  build_web_compilers: 'any'
+
 
 dependencies:
   chronosgl:
-    path: C:\Coding\Projects\Private\dart\ChronosGL
+    path: C:\BackupYes\Coding\Projects\Private\ChronosGL\Dart\ChronosGL
   chronosal:
-    path: C:\Coding\Projects\Private\dart\ChronosAL
+    path: C:\BackupYes\Coding\Projects\Private\ChronosGL\Dart\ChronosAL
   bspparser:
-    path: C:\Coding\Projects\Private\dart\Instagib\BSPParser
-  browser: any
+    path: C:\BackupYes\Coding\Projects\Private\ChronosGL\Dart\Instagib\BSPParser
+  
 
 
-transformers:
-- dart_to_js_script_rewriter

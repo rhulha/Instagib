@@ -13,7 +13,7 @@ class BinaryReader {
 
   double readOneFloat() {
     pos += 4;
-    return dv.getFloat32(pos - 4, Endianness.LITTLE_ENDIAN);
+    return dv.getFloat32(pos - 4, Endian.little);
   }
 
   Float32List readFloat(int i) {
@@ -25,18 +25,17 @@ class BinaryReader {
     return buf;
   }
 
-
   Uint8List readBytes(int i) {
-    Uint8List data = new Uint8List.view(dv.buffer, dv.offsetInBytes+ pos, i);
+    Uint8List data = new Uint8List.view(dv.buffer, dv.offsetInBytes + pos, i);
     pos += i;
     return data;
   }
-  
+
   int readOneInt() {
     pos += 4;
-    return dv.getUint32(pos - 4, Endianness.LITTLE_ENDIAN);
+    return dv.getUint32(pos - 4, Endian.little);
   }
-  
+
   Uint32List readInt(int i) {
     //List<double> buf = new List<double>(i);
     Uint32List buf = new Uint32List(i);
@@ -49,10 +48,10 @@ class BinaryReader {
   String readString(int i) {
     return new String.fromCharCodes(readBytes(i));
   }
-  
+
   int readOneSignedInt() {
     pos += 4;
-    return dv.getInt32(pos - 4, Endianness.LITTLE_ENDIAN);
+    return dv.getInt32(pos - 4, Endian.little);
   }
 
   Int32List readSignedInt(int i) {
@@ -65,7 +64,7 @@ class BinaryReader {
 
   int readOneSignedInt16() {
     pos += 2;
-    return dv.getInt16(pos - 2, Endianness.LITTLE_ENDIAN);
+    return dv.getInt16(pos - 2, Endian.little);
   }
 
   Uint16List readInt32IntoUInt16(int i) {
@@ -85,6 +84,6 @@ class BinaryReader {
   }
 
   Int32List readAllSignedInts() {
-    return readSignedInt(length~/4);
+    return readSignedInt(length ~/ 4);
   }
 }
